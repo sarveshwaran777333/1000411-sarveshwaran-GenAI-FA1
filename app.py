@@ -25,7 +25,7 @@ def get_reply(prompt):
         response = model.generate_content(
             prompt,
             generation_config={
-                "max_output_tokens": 250,
+                "max_output_tokens": 1500,
                 "temperature": 0.4
             }
         )
