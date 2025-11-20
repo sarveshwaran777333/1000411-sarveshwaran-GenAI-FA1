@@ -63,37 +63,4 @@ farmer_input = st.text_input("👩‍🌾 Farmer:", placeholder="Ask your questi
 if st.button("Ask AgroNova"):
     if farmer_input.strip() == "":
         st.warning("Please type something first!")
-    '''else:
-        prompt = (
-            "You are AgroNova, a friendly Tamil Nadu farming assistant. "
-            "Always answer in very simple English. "
-            "Use short answers (2–4 short lines). "
-            "Avoid scientific words. "
-            "Be warm and helpful.\n"
-            "When farmer asks about pests, crops, soil, or rain:\n"
-            "- Give main reason\n"
-            "- Give 2–3 easy steps\n"
-            "- Give 1 safety or prevention tip\n"
-            "If farmer says 'tell more', explain slightly more but remain simple.\n\n"
-            f"Farmer question: {farmer_input}"
-        )
-
-        try:
-            reply = get_reply(prompt)
-
-            if reply == "429":
-                st.warning("AgroNova is resting 🌱. Too many questions at once. Waiting 5 seconds...")
-                time.sleep(5)
-                reply = get_reply(prompt)
-
-            if reply == "429":
-                st.error("AgroNova is still resting 🌱. Please wait a minute and try again.")
-            elif not reply:
-                st.error("Sorry, I couldn't understand. Please ask again in simple words.")
-            else:
-                reply = shorten_reply(reply)
-                st.success(f"🤖 AgroNova: {reply}")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
-'''
+   
