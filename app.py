@@ -76,7 +76,7 @@ if st.button("Ask AgroNova"):
             "- Give 1 safety or prevention tip\n"
             "If farmer says 'tell more', explain slightly more but remain simple.\n\n"
             f"Farmer question: {farmer_input}"
-        )'''
+        )
 
         try:
             reply = get_reply(prompt)
@@ -96,3 +96,4 @@ if st.button("Ask AgroNova"):
 
         except Exception as e:
             st.error(f"Error: {e}")
+'''
