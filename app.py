@@ -63,7 +63,7 @@ farmer_input = st.text_input("👩‍🌾 Farmer:", placeholder="Ask your questi
 if st.button("Ask AgroNova"):
     if farmer_input.strip() == "":
         st.warning("Please type something first!")
-    else:
+    '''else:
         prompt = (
             "You are AgroNova, a friendly Tamil Nadu farming assistant. "
             "Always answer in very simple English. "
@@ -76,7 +76,7 @@ if st.button("Ask AgroNova"):
             "- Give 1 safety or prevention tip\n"
             "If farmer says 'tell more', explain slightly more but remain simple.\n\n"
             f"Farmer question: {farmer_input}"
-        )
+        )'''
 
         try:
             reply = get_reply(prompt)
