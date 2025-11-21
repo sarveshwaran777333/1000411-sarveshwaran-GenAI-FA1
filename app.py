@@ -1,3 +1,5 @@
+#genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
+
 import streamlit as st
 import requests
 import google.generativeai as genai
@@ -16,7 +18,7 @@ WEATHER_API = (
 )
 
 # SET YOUR GEMINI API KEY
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
+genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 
