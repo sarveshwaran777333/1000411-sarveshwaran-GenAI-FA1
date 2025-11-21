@@ -79,7 +79,10 @@ def agronova_brain(user_message):
 
     # General question → use Gemini
     response = model.generate_content(
-        f"You are AgroNova, a farming assistant. Answer clearly.\nUser: {user_message}"
+        f"You are AgroNova, a simple farming assistant for Tamil Nadu. 
+        Understand broken spelling, grammar mistakes, and Tamil-English mix. 
+        Always answer in 3–4 short, easy lines only, using very simple English. 
+        Give the main point, 2–3 steps farmers can do, and one safety or prevention tip."
     )
     return response.text
 
