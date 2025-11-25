@@ -2,14 +2,11 @@
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
 import streamlit as st
-import google.generativeai as genai
 import requests
 import json
-import time
+import google.generativeai as genai
 
-# --------------------------------------------------
-# CONFIG
-# --------------------------------------------------
+# ---------------- CONFIG ----------------
 FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 SESSION_NODE = "active_session"
 
@@ -22,134 +19,105 @@ genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
-# --------------------------------------------------
-# Firebase
-# --------------------------------------------------
-
-def fb_push(role, text):
-    data = {"role": role, "text": text, "time": time.time()}
-    requests.post(f"{FIREBASE_URL}/{SESSION_NODE}.json", json=data)
-
-def fb_load(limit=12):
-    r = requests.get(f"{FIREBASE_URL}/{SESSION_NODE}.json")
-    if r.status_code != 200 or r.json() is None:
-        return []
-    data = list(r.json().values())
-    data.sort(key=lambda x: x["time"])
-    return data[-limit:]
-
-def fb_clear():
-    requests.delete(f"{FIREBASE_URL}/{SESSION_NODE}.json")
+# ---------------- FIREBASE HELPERS ----------------
+def load_history():
+    try:
+        r = requests.get(f"{FIREBASE_URL}/{SESSION_NODE}.json")
+        if r.status_code == 200 and r.json():
+            return r.json()
+    except:
+        pass
+    return []
 
 
-# --------------------------------------------------
-# Weather
-# --------------------------------------------------
+def save_history(history):
+    try:
+        requests.put(f"{FIREBASE_URL}/{SESSION_NODE}.json",
+                     data=json.dumps(history))
+    except:
+        pass
 
+
+# ---------------- WEATHER TOOL ----------------
 def get_weather(lat, lon):
-    url = WEATHER_API.format(lat=lat, lon=lon)
-    r = requests.get(url)
-
-    if r.status_code != 200:
-        return "Weather service unreachable."
-
-    data = r.json()
-    if "current_weather" not in data:
-        return "Weather data not available."
-
-    w = data["current_weather"]
-    return (
-        f"Temperature: {w['temperature']}°C\n"
-        f"Windspeed: {w['windspeed']} km/h\n"
-        f"Weather Code: {w['weathercode']}"
-    )
+    try:
+        url = WEATHER_API.format(lat=lat, lon=lon)
+        data = requests.get(url).json()
+        w = data["current_weather"]
+        return (
+            f"Weather now: {w['temperature']}°C, "
+            f"Wind {w['windspeed']} km/h, "
+            f"Condition Code {w['weathercode']}."
+        )
+    except:
+        return "Weather fetch failed."
 
 
-# --------------------------------------------------
-# AgroNova Brain
-# --------------------------------------------------
-
+# ---------------- MAIN BRAIN ----------------
 def agronova_brain(user_text, history):
 
-    # Hardcoded local logic
-    if "monsoon" in user_text.lower() and "madurai" in user_text.lower():
-        return (
-            "Madurai gets Northeast Monsoon rainfall from Oct–Dec.\n"
-            "Farmers can prepare land before first showers.\n"
-            "Keep seeds stored in dry place.\n"
-            "Clean drainage to prevent crop damage."
-        )
-
-    if "lat" in user_text.lower() and "lon" in user_text.lower():
+    # Detect lat lon format
+    if "lat" in user_text and "lon" in user_text:
         try:
             parts = user_text.replace(",", " ").split()
             lat = float(parts[parts.index("lat") + 1])
             lon = float(parts[parts.index("lon") + 1])
             return get_weather(lat, lon)
         except:
-            return "Use this format: lat 9.9 lon 78.1"
+            return "Use format: lat 10.1 lon 78.3"
 
-    # Build messages for Gemini
+    # Only short context to avoid token overload
+    last_user_msg = ""
+    for msg in reversed(history):
+        if msg["role"] == "user":
+            last_user_msg = msg["text"]
+            break
+
     system_prompt = (
-        "You are AgroNova, a simple farming helper for Tamil Nadu. "
-        "Understand wrong spelling and Tamil-English mix. "
-        "Always answer in 3–4 very simple lines."
+        "You are AgroNova, a farming assistant for Tamil Nadu farmers. "
+        "Always answer in simple English. "
+        "Limit answer to 3–4 short lines only. "
+        "If question is unclear, ask for crop, location, or season."
     )
 
     messages = [
-        {"role": "user", "parts": [system_prompt]}
+        {"role": "user", "parts": [{"text": system_prompt}]},
+        {"role": "user", "parts": [{"text": last_user_msg}]},
+        {"role": "user", "parts": [{"text": user_text}]}
     ]
 
-    for msg in history:
-        messages.append({
-            "role": msg["role"],
-            "parts": [msg["text"]]
-        })
-
-    messages.append({"role": "user", "parts": [user_text]})
-
-    # Generate response
-    response = model.generate_content(messages)
-    return response.text
+    try:
+        response = model.generate_content(messages)
+        return response.text
+    except:
+        return "Server busy. Try again."
 
 
-# --------------------------------------------------
-# Streamlit App
-# --------------------------------------------------
-
+# ---------------- UI ----------------
 def main():
+    st.title("🌾 AgroNova – Smart Farming Assistant")
 
-    st.title("🌱 AgroNova – Smart Farming Assistant")
-    st.caption("Farming, weather and monsoon support for Tamil Nadu")
+    if "history" not in st.session_state:
+        st.session_state.history = load_history()
 
-    history = fb_load()
+    user_input = st.text_input("Ask something:")
 
-    # Show chat history
-    for msg in history:
+    if st.button("Send"):
+        if user_input.strip():
+
+            reply = agronova_brain(user_input, st.session_state.history)
+
+            st.session_state.history.append({"role": "user", "text": user_input})
+            st.session_state.history.append({"role": "bot", "text": reply})
+
+            save_history(st.session_state.history)
+
+    st.write("### Chat History")
+    for msg in st.session_state.history:
         if msg["role"] == "user":
-            st.markdown(f"**Farmer:** {msg['text']}")
+            st.write(f"**You:** {msg['text']}")
         else:
-            st.markdown(f"**AgroNova:** {msg['text']}")
-
-    user_input = st.text_input("Ask your question:")
-
-    if st.button("Ask"):
-        if not user_input.strip():
-            st.warning("Please type something.")
-            return
-
-        fb_push("user", user_input)
-
-        reply = agronova_brain(user_input, history)
-
-        fb_push("assistant", reply)
-
-        st.success(f"AgroNova: {reply}")
-
-    if st.button("Clear Chat"):
-        fb_clear()
-        st.warning("Chat cleared.")
-        st.stop()
+            st.write(f"**Bot:** {msg['text']}")
 
 
 if __name__ == "__main__":
