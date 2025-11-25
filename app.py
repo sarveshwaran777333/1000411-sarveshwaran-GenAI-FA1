@@ -66,31 +66,32 @@ def agronova_brain(user_text, history):
         except:
             return "Use format: lat 10.1 lon 78.3"
 
-    # Only short context to avoid token overload
-    last_user_msg = ""
+    # Short-context retrieval
+    last_msg = ""
     for msg in reversed(history):
         if msg["role"] == "user":
-            last_user_msg = msg["text"]
+            last_msg = msg["text"]
             break
 
     system_prompt = (
-        "You are AgroNova, a farming assistant for Tamil Nadu farmers. "
-        "Always answer in simple English. "
-        "Limit answer to 3–4 short lines only. "
-        "If question is unclear, ask for crop, location, or season."
+        "You are AgroNova, a simple farming assistant for Tamil Nadu. "
+        "Answer in very simple English. "
+        "Limit every reply to 3–4 lines only. "
+        "If unclear, ask for crop, soil, or season."
     )
 
+    # CORRECT FORMAT → prevents server busy
     messages = [
         {"role": "user", "parts": [{"text": system_prompt}]},
-        {"role": "user", "parts": [{"text": last_user_msg}]},
+        {"role": "user", "parts": [{"text": last_msg}]},
         {"role": "user", "parts": [{"text": user_text}]}
     ]
 
     try:
         response = model.generate_content(messages)
         return response.text
-    except:
-        return "Server busy. Try again."
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 # ---------------- UI ----------------
@@ -122,3 +123,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
