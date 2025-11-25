@@ -69,22 +69,23 @@ def agronova_brain(user_message):
     # Recognize monsoon question for Madurai
     if "monsoon" in user_lower and "madurai" in user_lower:
         return (
-            "Madurai mainly receives monsoon rain from the **Northeast Monsoon**, "
-            "which comes between **October and December**."
+            "Madurai mainly gets rain from the Northeast Monsoon, "
+            "which comes from October to December."
         )
 
     # Recognize weather request
     if "weather" in user_lower:
         return "Please give latitude and longitude like: lat 9.9 lon 78.1"
 
-    # General question → use Gemini
+    # General Gemini reply
     response = model.generate_content(
-        f"You are AgroNova, a simple farming assistant for Tamil Nadu. 
-        Understand broken spelling, grammar mistakes, and Tamil-English mix. 
-        Always answer in 3–4 short, easy lines only, using very simple English. 
-        Give the main point, 2–3 steps farmers can do, and one safety or prevention tip."
+        "You are AgroNova, a simple farming helper for Tamil Nadu. "
+        "Understand wrong spelling and Tamil-English mix. "
+        f"Always answer in 3–4 short lines, very easy English, with steps + safety. Question: {user_message}"
     )
+
     return response.text
+
 
 
 # -------------------------------------------------------------------
