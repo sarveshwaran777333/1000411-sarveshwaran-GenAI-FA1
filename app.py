@@ -2,123 +2,126 @@
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
 import streamlit as st
+import google.generativeai as genai
 import requests
 import json
-import google.generativeai as genai
+import time
 
-# ---------------- CONFIG ----------------
-FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
-SESSION_NODE = "active_session"
 
-WEATHER_API = (
-    "https://api.open-meteo.com/v1/forecast?"
-    "latitude={lat}&longitude={lon}&current_weather=true"
-)
-
+# ------------------------------------------------------------
+# CONFIG (REQUIRED ONLINE)
+# ------------------------------------------------------------
 genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
+SESSION_PATH = "agronova_memory"
 
 
-# ---------------- FIREBASE HELPERS ----------------
-def load_history():
+# ------------------------------------------------------------
+# SAFE GEMINI CALL (ONLINE ONLY)
+# ------------------------------------------------------------
+def safe_extract(response):
     try:
-        r = requests.get(f"{FIREBASE_URL}/{SESSION_NODE}.json")
-        if r.status_code == 200 and r.json():
-            return r.json()
+        if hasattr(response, "text") and response.text:
+            return response.text.strip()
+        return response.candidates[0].content.parts[0].text.strip()
     except:
-        pass
-    return []
+        return "Error: Could not read model response."
 
 
-def save_history(history):
-    try:
-        requests.put(f"{FIREBASE_URL}/{SESSION_NODE}.json",
-                     data=json.dumps(history))
-    except:
-        pass
-
-
-# ---------------- WEATHER TOOL ----------------
-def get_weather(lat, lon):
-    try:
-        url = WEATHER_API.format(lat=lat, lon=lon)
-        data = requests.get(url).json()
-        w = data["current_weather"]
-        return (
-            f"Weather now: {w['temperature']}°C, "
-            f"Wind {w['windspeed']} km/h, "
-            f"Condition Code {w['weathercode']}."
-        )
-    except:
-        return "Weather fetch failed."
-
-
-# ---------------- MAIN BRAIN ----------------
-def agronova_brain(user_text, history):
-
-    # Detect lat lon format
-    if "lat" in user_text and "lon" in user_text:
+def gemini_call(prompt):
+    """Online-only Gemini call. No offline fallback."""
+    for _ in range(2):
         try:
-            parts = user_text.replace(",", " ").split()
-            lat = float(parts[parts.index("lat") + 1])
-            lon = float(parts[parts.index("lon") + 1])
-            return get_weather(lat, lon)
-        except:
-            return "Use format: lat 10.1 lon 78.3"
+            r = model.generate_content(
+                prompt,
+                generation_config={"temperature": 0.4, "max_output_tokens": 150}
+            )
+            return safe_extract(r)
 
-    # Short-context retrieval
-    last_msg = ""
-    for msg in reversed(history):
-        if msg["role"] == "user":
-            last_msg = msg["text"]
-            break
+        except Exception as e:
+            if "429" in str(e):
+                time.sleep(2)
+                continue
+            return f"Error: {e}"
+    return "Error: Server overloaded."
 
-    system_prompt = (
-        "You are AgroNova, a simple farming assistant for Tamil Nadu. "
-        "Answer in very simple English. "
-        "Limit every reply to 3–4 lines only. "
-        "If unclear, ask for crop, soil, or season."
+
+# ------------------------------------------------------------
+# FIREBASE HELPERS (ONLINE ONLY)
+# ------------------------------------------------------------
+def fb_put(path, data):
+    """Store last turn (online only)."""
+    try:
+        requests.put(f"{FIREBASE_URL}/{path}.json", json=data)
+    except:
+        pass
+
+
+def fb_get(path):
+    """Fetch last turn (online only)."""
+    try:
+        r = requests.get(f"{FIREBASE_URL}/{path}.json")
+        if r.status_code == 200:
+            return r.json()
+        return None
+    except:
+        return None
+
+
+# ------------------------------------------------------------
+# FARMING BOT LOGIC
+# ------------------------------------------------------------
+def agronova(user_msg, uid="farmer1"):
+
+    # Fetch previous turn from Firebase (online)
+    prev = fb_get(f"{SESSION_PATH}/{uid}") or {}
+    last_user = prev.get("user", "")
+    last_bot = prev.get("bot", "")
+
+    system = (
+        "You are AgroNova, a simple Tamil Nadu farming assistant. "
+        "Use very simple English. Keep answers short: 3–4 lines only."
     )
 
-    # CORRECT FORMAT → prevents server busy
-    messages = [
-        {"role": "user", "parts": [{"text": system_prompt}]},
-        {"role": "user", "parts": [{"text": last_msg}]},
-        {"role": "user", "parts": [{"text": user_text}]}
-    ]
+    prompt = system + "\n\n"
 
-    try:
-        response = model.generate_content(messages)
-        return response.text
-    except Exception as e:
-        return f"Error: {str(e)}"
+    # Add online memory if exists
+    if last_user:
+        prompt += (
+            f"Previous Farmer Question: {last_user}\n"
+            f"Previous AgroNova Answer: {last_bot}\n\n"
+        )
+
+    # Add new question
+    prompt += f"Farmer: {user_msg}\nAgroNova:"
+
+    # online Gemini call
+    reply = gemini_call(prompt)
+
+    # save to Firebase (online memory)
+    fb_put(f"{SESSION_PATH}/{uid}", {"user": user_msg, "bot": reply})
+
+    return reply
 
 
-# ---------------- UI ----------------
+# ------------------------------------------------------------
+# STREAMLIT UI
+# ------------------------------------------------------------
 def main():
-    st.title("🌾 AgroNova – Smart Farming Assistant")
+    st.title("🌾 AgroNova – Online Farming Assistant")
 
-    if "history" not in st.session_state:
-        st.session_state.history = load_history()
+    st.warning("This bot works **only online**. No offline mode. "
+               "Every response depends on Gemini + Firebase.")
 
-    user_input = st.text_input("Ask something:")
+    user_q = st.text_input("Ask something:")
 
     if st.button("Send"):
-        if user_input.strip():
-
-            reply = agronova_brain(user_input, st.session_state.history)
-
-            st.session_state.history.append({"role": "user", "text": user_input})
-            st.session_state.history.append({"role": "bot", "text": reply})
-
-            save_history(st.session_state.history)
-
-    st.write("### Chat History")
-    for msg in st.session_state.history:
-        if msg["role"] == "user":
-            st.write(f"**You:** {msg['text']}")
-        else:
-            st.write(f"**Bot:** {msg['text']}")
+        if user_q.strip():
+            reply = agronova(user_q)
+            st.write("### Bot:")
+            st.write(reply)
 
 
 if __name__ == "__main__":
