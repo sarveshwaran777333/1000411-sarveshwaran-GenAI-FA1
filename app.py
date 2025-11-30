@@ -1,91 +1,120 @@
 #genai.configure(api_key="AIzaSyDP8Llyi9Rd9d2s7r5SVbm4iOSXCZK-wyo")
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
-import streamlit as st
 import requests
-import json
-import google.generativeai as genai
+from google import genai
+from google.genai.types import Content, Part
 
-# --------------------------------------------
-# CONFIG
-# --------------------------------------------
-genai.configure(api_key="AIzaSyDP8Llyi9Rd9d2s7r5SVbm4iOSXCZK-wyo")
-model = genai.GenerativeModel("gemini-2.0-flash")
+# ---------------------------------------------------
+# 1. CONFIG
+# ---------------------------------------------------
 
+API_KEY = "AIzaSyDP8Llyi9Rd9d2s7r5SVbm4iOSXCZK-wyo"
 FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
-MEMORY_NODE = "agronova_memory"
+SESSION_NODE = "active_session"
+
+client = genai.Client(api_key=API_KEY)
+MODEL = "gemini-1.5-flash"
+
+SYSTEM_TEXT = """
+You are SmartFarm Buddy.
+You help Tamil Nadu farmers with simple, clear answers.
+"""
 
 
-# --------------------------------------------
-# FIREBASE HELPERS
-# --------------------------------------------
-def load_memory():
-    try:
-        r = requests.get(f"{FIREBASE_URL}/{MEMORY_NODE}.json")
-        if r.status_code == 200 and r.json():
-            return r.json()
-    except:
-        pass
-    return {"last_user": "", "last_bot": ""}
+# ---------------------------------------------------
+# 2. Firebase: Save chat history
+# ---------------------------------------------------
+def save_message(role, text):
+    data = {"role": role, "text": text}
+    requests.post(f"{FIREBASE_URL}/{SESSION_NODE}.json", json=data)
 
 
-def save_memory(data):
-    try:
-        requests.put(f"{FIREBASE_URL}/{MEMORY_NODE}.json", json=data)
-    except:
-        pass
+# ---------------------------------------------------
+# 3. Firebase: Load entire chat history
+# ---------------------------------------------------
+def load_history():
+    r = requests.get(f"{FIREBASE_URL}/{SESSION_NODE}.json")
+    if r.status_code != 200 or r.json() is None:
+        return []
+
+    raw = r.json()
+    history = []
+
+    for key in raw:
+        history.append(raw[key])
+
+    return history
 
 
-# --------------------------------------------
-# AGRO NOVA (very small Gemini prompt)
-# --------------------------------------------
-def agronova(user_msg):
+# ---------------------------------------------------
+# 4. Build conversation for Gemini
+# ---------------------------------------------------
+def build_conversation(user_text):
+    conversation = []
 
-    mem = load_memory()
-
-    prompt = (
-        "You are AgroNova, a simple farming helper for Tamil Nadu. "
-        "Use very easy English and reply in 3–4 short lines only.\n\n"
-        f"Earlier farmer question: {mem['last_user']}\n"
-        f"Earlier answer: {mem['last_bot']}\n\n"
-        f"Farmer: {user_msg}\nAgroNova:"
+    # Add system instruction
+    conversation.append(
+        Content(role="user", parts=[Part.from_text(SYSTEM_TEXT)])
     )
 
-    try:
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "max_output_tokens": 80,   # very small
-                "temperature": 0.3
-            }
+    # Load previous messages
+    history = load_history()
+
+    for msg in history:
+        conversation.append(
+            Content(
+                role=msg["role"],
+                parts=[Part.from_text(msg["text"])]
+            )
         )
-        reply = response.text.strip()
+
+    # Add latest user message
+    conversation.append(
+        Content(
+            role="user",
+            parts=[Part.from_text(user_text)]
+        )
+    )
+
+    return conversation
+
+
+# ---------------------------------------------------
+# 5. Ask Gemini with memory
+# ---------------------------------------------------
+def ask_bot(user_text):
+    try:
+        conversation = build_conversation(user_text)
+
+        res = client.models.generate_content(
+            model=MODEL,
+            contents=conversation
+        )
+
+        reply = res.text.strip()
+        save_message("user", user_text)
+        save_message("assistant", reply)
+
+        return reply
+
     except Exception as e:
-        reply = f"Error: {str(e)}"
+        err = str(e)
+        if "429" in err:
+            return "Error: Rate limit reached. Try again later."
+        if "503" in err:
+            return "Error: Server overloaded."
+        if "404" in err:
+            return "Error: Model not found. Use gemini-1.5-flash."
 
-    # Save new memory
-    save_memory({
-        "last_user": user_msg,
-        "last_bot": reply
-    })
-
-    return reply
-
-
-# --------------------------------------------
-# STREAMLIT UI
-# --------------------------------------------
-def main():
-    st.title("🌾 AgroNova – Smart Farming Assistant")
-
-    user_input = st.text_input("Ask something:")
-
-    if st.button("Send"):
-        if user_input.strip():
-            reply = agronova(user_input)
-            st.write("### Bot:")
-            st.write(reply)
+        return "Error: " + err
 
 
+# ---------------------------------------------------
+# 6. CLI bot loop (optional)
+# ---------------------------------------------------
 if __name__ == "__main__":
-    main()
+    print("SmartFarm Buddy is online.")
+    while True:
+        q = input("You: ")
+        print("Bot:", ask_bot(q))
