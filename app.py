@@ -2,7 +2,7 @@
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
 import requests
-from google import genai
+import google.genai as genai
 from google.genai.types import Content, Part
 
 # ---------------------------------------------------
