@@ -12,7 +12,7 @@ import time
 # CONFIG (REQUIRED ONLINE)
 # ------------------------------------------------------------
 genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 SESSION_PATH = "agronova_memory"
