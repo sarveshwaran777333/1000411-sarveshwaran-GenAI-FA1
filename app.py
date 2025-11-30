@@ -1,4 +1,4 @@
-#genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
+#genai.configure(api_key="AIzaSyDP8Llyi9Rd9d2s7r5SVbm4iOSXCZK-wyo")
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
 import streamlit as st
@@ -9,7 +9,7 @@ import google.generativeai as genai
 # --------------------------------------------
 # CONFIG
 # --------------------------------------------
-genai.configure(api_key="AIzaSyB2M5orKk64-U65TmVUn4uD8_PKR03e7Nc")
+genai.configure(api_key="AIzaSyDP8Llyi9Rd9d2s7r5SVbm4iOSXCZK-wyo")
 model = genai.GenerativeModel("gemini-2.0-flash")
 
 FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
