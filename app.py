@@ -14,7 +14,7 @@ FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 SESSION_NODE = "active_session"
 
 client = genai.Client(api_key=API_KEY)
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.5-flash"
 
 SYSTEM_TEXT = """
 You are SmartFarm Buddy.
