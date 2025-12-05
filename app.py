@@ -30,11 +30,10 @@ def analyze_image(prompt, image_file):
 
 
 def analyze_text(prompt):
-    result = genai.generate(
-        model=MODEL,
-        prompt=prompt
-    )
-    return result.text
+    model = genai.GenerativeModel(MODEL)
+    response = model.generate_content(prompt)
+    return response.text
+)
 
 
 # -----------------------------------------
@@ -97,8 +96,8 @@ elif option == "Plant Disease Detection":
 
 else:
     st.header("💬 General Farming Query")
-    question = st.text_input("Ask any farming question:")
+question = st.text_input("Ask any farming question:")
 
-    if st.button("Ask"):
-        response = analyze_text(question)
-        st.write(response)
+if st.button("Ask"):
+    response = analyze_text(question)
+    st.write(response)
