@@ -33,7 +33,7 @@ def analyze_text(prompt):
     model = genai.GenerativeModel(MODEL)
     response = model.generate_content(prompt)
     return response.text
-    )
+    
 
 
 # -----------------------------------------
