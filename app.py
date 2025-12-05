@@ -2,7 +2,7 @@
 #FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
 
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 import os
 
 # Configure Gemini
