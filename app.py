@@ -8,42 +8,44 @@ import os
 # ---------------------------------------------------
 # CONFIG
 # ---------------------------------------------------
-genai.configure(api_key=os.getenv("AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"))   # Make sure your API key variable is correct
-MODEL = "gemini-2.5-flash"
+
+API_KEY = "AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"
+genai.configure(api_key=API_KEY)
+
+MODEL_NAME = "gemini-2.5-flash"
+model = genai.GenerativeModel(MODEL_NAME)
 
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
 
 
 # ---------------------------------------------------
-# IMAGE ANALYSIS FUNCTION (FIXED)
+# IMAGE ANALYSIS FUNCTION
 # ---------------------------------------------------
 def analyze_image(prompt, image_file):
     if image_file is None:
         return "Please upload an image."
 
-    # Read image bytes directly
-    image_bytes = image_file.read()
-
-    model = genai.GenerativeModel(MODEL)
+    image_bytes = image_file.getvalue()
+    mime = image_file.type or "image/jpeg"
 
     response = model.generate_content(
         [
             prompt,
             {
-                "mime_type": image_file.type,
+                "mime_type": mime,
                 "data": image_bytes
             }
-        ]
+        ],
+        stream=False
     )
 
     return response.text
 
 
 # ---------------------------------------------------
-# TEXT ANALYSIS FUNCTION (WORKING)
+# TEXT ANALYSIS FUNCTION
 # ---------------------------------------------------
 def analyze_text(prompt):
-    model = genai.GenerativeModel(MODEL)
     response = model.generate_content(prompt)
     return response.text
 
@@ -64,7 +66,6 @@ option = st.sidebar.radio(
     ]
 )
 
-
 # ---------------------------------------------------
 # LEAF DISEASE ANALYSIS
 # ---------------------------------------------------
@@ -73,16 +74,17 @@ if option == "Leaf Disease Analysis":
     img = st.file_uploader("Upload leaf image", type=["jpg", "png", "jpeg"])
 
     if st.button("Analyze Leaf"):
-        prompt = """Analyze this plant leaf. Provide:
+        prompt = """
+        Analyze this plant leaf. Provide:
         1. Disease or pest detected
         2. Symptoms
         3. Severity level
         4. Treatment recommendations
         5. Organic/home remedies
         """
+        st.write("Analyzing... please wait.")
         response = analyze_image(prompt, img)
         st.write(response)
-
 
 # ---------------------------------------------------
 # SOIL HEALTH ANALYSIS
@@ -92,7 +94,8 @@ elif option == "Soil Health Analysis":
     img = st.file_uploader("Upload soil image", type=["jpg", "png", "jpeg"])
 
     if st.button("Analyze Soil"):
-        prompt = """Analyze the soil in this image. Provide:
+        prompt = """
+        Analyze the soil in this image. Provide:
         - Soil type
         - Moisture level
         - Fertility & nutrients
@@ -100,9 +103,9 @@ elif option == "Soil Health Analysis":
         - Best crops for this soil
         - Improvement suggestions
         """
+        st.write("Analyzing...")
         response = analyze_image(prompt, img)
         st.write(response)
-
 
 # ---------------------------------------------------
 # PLANT DISEASE DETECTION
@@ -112,18 +115,19 @@ elif option == "Plant Disease Detection":
     img = st.file_uploader("Upload plant image", type=["jpg", "png", "jpeg"])
 
     if st.button("Detect Disease"):
-        prompt = """Detect plant disease from the image. Provide:
+        prompt = """
+        Detect plant disease from the image. Provide:
         - Disease name
         - Visible symptoms
         - Spread prevention steps
         - Treatment suggestions
         """
+        st.write("Analyzing...")
         response = analyze_image(prompt, img)
         st.write(response)
 
-
 # ---------------------------------------------------
-# GENERAL FARMING QUESTION
+# GENERAL FARMING QUERY
 # ---------------------------------------------------
 else:
     st.header("💬 General Farming Query")
@@ -131,5 +135,6 @@ else:
 question = st.text_input("Ask any farming question:")
 
 if st.button("Ask"):
+    st.write("Thinking...")
     response = analyze_text(question)
     st.write(response)
