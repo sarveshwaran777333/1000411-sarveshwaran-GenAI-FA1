@@ -12,7 +12,7 @@ import os
 API_KEY = "AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"
 genai.configure(api_key=API_KEY)
 
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.5-pro"
 model = genai.GenerativeModel(MODEL)
 
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
