@@ -5,50 +5,69 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# Configure Gemini
-genai.configure(api_key=os.getenv("AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"))
+# ---------------------------------------------------
+# CONFIG
+# ---------------------------------------------------
+genai.configure(api_key=os.getenv("AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"))   # Make sure your API key variable is correct
 MODEL = "gemini-2.5-flash"
 
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
 
 
+# ---------------------------------------------------
+# IMAGE ANALYSIS FUNCTION (FIXED)
+# ---------------------------------------------------
 def analyze_image(prompt, image_file):
     if image_file is None:
         return "Please upload an image."
 
-    temp_path = "temp_image.jpg"
-    with open(temp_path, "wb") as f:
-        f.write(image_file.getbuffer())
+    # Read image bytes directly
+    image_bytes = image_file.read()
 
-    result = genai.generate(
-        model=MODEL,
-        prompt=prompt,
-        images=[temp_path]
+    model = genai.GenerativeModel(MODEL)
+
+    response = model.generate_content(
+        [
+            prompt,
+            {
+                "mime_type": image_file.type,
+                "data": image_bytes
+            }
+        ]
     )
 
-    return result.text
+    return response.text
 
 
+# ---------------------------------------------------
+# TEXT ANALYSIS FUNCTION (WORKING)
+# ---------------------------------------------------
 def analyze_text(prompt):
     model = genai.GenerativeModel(MODEL)
     response = model.generate_content(prompt)
     return response.text
-    
 
 
-# -----------------------------------------
+# ---------------------------------------------------
 # UI
-# -----------------------------------------
+# ---------------------------------------------------
 
 st.title("🌾 Smart Farming Assistant (Gemini 2.5 Flash)")
 
-option = st.sidebar.radio("Choose analysis type:", [
-    "Leaf Disease Analysis",
-    "Soil Health Analysis",
-    "Plant Disease Detection",
-    "General Farming Query"
-])
+option = st.sidebar.radio(
+    "Choose analysis type:",
+    [
+        "Leaf Disease Analysis",
+        "Soil Health Analysis",
+        "Plant Disease Detection",
+        "General Farming Query"
+    ]
+)
 
+
+# ---------------------------------------------------
+# LEAF DISEASE ANALYSIS
+# ---------------------------------------------------
 if option == "Leaf Disease Analysis":
     st.header("🌿 Leaf Disease Analysis")
     img = st.file_uploader("Upload leaf image", type=["jpg", "png", "jpeg"])
@@ -64,6 +83,10 @@ if option == "Leaf Disease Analysis":
         response = analyze_image(prompt, img)
         st.write(response)
 
+
+# ---------------------------------------------------
+# SOIL HEALTH ANALYSIS
+# ---------------------------------------------------
 elif option == "Soil Health Analysis":
     st.header("🌱 Soil Health Analysis")
     img = st.file_uploader("Upload soil image", type=["jpg", "png", "jpeg"])
@@ -80,6 +103,10 @@ elif option == "Soil Health Analysis":
         response = analyze_image(prompt, img)
         st.write(response)
 
+
+# ---------------------------------------------------
+# PLANT DISEASE DETECTION
+# ---------------------------------------------------
 elif option == "Plant Disease Detection":
     st.header("🩺 Plant Disease Detection")
     img = st.file_uploader("Upload plant image", type=["jpg", "png", "jpeg"])
@@ -94,8 +121,13 @@ elif option == "Plant Disease Detection":
         response = analyze_image(prompt, img)
         st.write(response)
 
+
+# ---------------------------------------------------
+# GENERAL FARMING QUESTION
+# ---------------------------------------------------
 else:
     st.header("💬 General Farming Query")
+
 question = st.text_input("Ask any farming question:")
 
 if st.button("Ask"):
