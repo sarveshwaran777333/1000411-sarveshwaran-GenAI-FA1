@@ -7,7 +7,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 
 try:
-    API_KEY = st.secrets["AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg"]
+    API_KEY = st.secrets["AIzaSyBRxR6B_cF_-2DKtqU01O_3rtc9R56o17I"]
 except KeyError:
     st.error("🚨 Configuration Error: Gemini API key not found.")
     st.markdown(
