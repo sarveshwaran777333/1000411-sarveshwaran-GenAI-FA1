@@ -12,7 +12,7 @@ except KeyError:
     st.error("🚨 Configuration Error: Gemini API key not found.")
     st.markdown(
         "Please ensure you have set `gemini_api_key` in your "
-        "`.streamlit/secrets.toml` file or as an environment variable."
+        "`secrets.toml` file or as an environment variable."
     )
     st.stop()
 
