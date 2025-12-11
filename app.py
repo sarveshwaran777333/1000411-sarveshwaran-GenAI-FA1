@@ -1,29 +1,17 @@
-#genai.configure(api_key="AIzaSyAq-ZfkANIx7dsOQ4keAwlqVt2S3hmevyg")
-#FIREBASE_URL = "https://agronova-weather-default-rtdb.firebaseio.com"
-
+#AIzaSyAGciP7tYbmMBR4splw6oTM0fivp2aKgxI
 import streamlit as st
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
-
-try:
-    API_KEY = st.secrets["AIzaSyCViG8xjJIo3yTWJ6G4wXNSgqQJ9w0GOCk"]
-except KeyError:
-    st.error("🚨 Configuration Error: Gemini API key not found.")
-    st.markdown(
-        "Please ensure you have set `gemini_api_key` in your "
-        "`secrets.toml` file or as an environment variable."
-    )
+API_KEY = "AIzaSyAGciP7tYbmMBR4splw6oTM0fivp2aKgxI"
+if not API_KEY or API_KEY.strip() == "":
+    st.error("🚨 ERROR: API KEY is missing. Please add your key in the code.")
     st.stop()
 
-# --- CONFIGURATION ---
 genai.configure(api_key=API_KEY)
 
-# Using 'flash' for better speed/cost balance for image analysis and general chat.
-MODEL = "gemini-2.5-flash" 
+MODEL = "gemini-2.5-flash"
 
-# Configure safety settings to potentially allow more agricultural content
-# which might involve discussions of pests/diseases, if needed.
 safety_settings = [
     {
         "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -37,11 +25,8 @@ except Exception as e:
     st.error(f"Failed to initialize model {MODEL}: {e}")
     st.stop()
 
-
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
 
-
-# --- ENHANCED ANALYSIS FUNCTIONS with Error Handling ---
 
 @st.cache_data(show_spinner="Analyzing image with Gemini...")
 def analyze_image(prompt, image_file):
@@ -49,11 +34,9 @@ def analyze_image(prompt, image_file):
     if image_file is None:
         return "**Please upload an image before clicking 'Analyze'.**"
 
-    # Get data and MIME type
     image_bytes = image_file.getvalue()
     mime = image_file.type or "image/jpeg"
 
-    # Prepare content parts
     content_parts = [
         prompt,
         {
@@ -66,7 +49,6 @@ def analyze_image(prompt, image_file):
         response = model.generate_content(content_parts)
         return response.text
     except Exception as e:
-        # CRITICAL FIX 2: Better API error handling
         return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
 
 
@@ -77,16 +59,13 @@ def analyze_text(prompt):
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # CRITICAL FIX 2: Better API error handling
         return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
 
-
-# --- UI LAYOUT ---
 
 st.title("🌾 Smart Farming Assistant (Gemini 2.5 Flash)")
 st.caption("AI-powered analysis for plant health, soil conditions, and general farming questions.")
 
-# Sidebar for analysis option
+
 option = st.sidebar.radio(
     "Choose analysis type:",
     [
@@ -97,9 +76,6 @@ option = st.sidebar.radio(
     ]
 )
 
-# ---------------------------------------------------
-# LEAF DISEASE ANALYSIS
-# ---------------------------------------------------
 if option == "Leaf Disease Analysis":
     st.header("🌿 Leaf Disease Analysis")
     st.write("Upload a clear, close-up image of the affected leaf.")
@@ -108,20 +84,17 @@ if option == "Leaf Disease Analysis":
     if st.button("🔬 Analyze Leaf"):
         prompt = """
         Analyze this plant leaf. Provide your answer in a clear Markdown format with bold headings for each section:
-        1. **Disease or Pest Detected**: The most likely issue.
-        2. **Symptoms**: Detailed visible characteristics.
-        3. **Severity Level**: Low, Medium, or High.
-        4. **Treatment Recommendations**: Specific actions, including chemical or biological controls.
-        5. **Organic/Home Remedies**: Safe, eco-friendly alternatives.
+        1. **Disease or Pest Detected**
+        2. **Symptoms**
+        3. **Severity Level**
+        4. **Treatment Recommendations**
+        5. **Organic/Home Remedies**
         """
         st.info("Analysis in progress...")
         response = analyze_image(prompt, img)
         st.markdown("## 🔍 Analysis Results")
         st.markdown(response)
 
-# ---------------------------------------------------
-# SOIL HEALTH ANALYSIS
-# ---------------------------------------------------
 elif option == "Soil Health Analysis":
     st.header("🌱 Soil Health Analysis")
     st.write("Upload an image of your soil sample.")
@@ -129,57 +102,47 @@ elif option == "Soil Health Analysis":
 
     if st.button("🧪 Analyze Soil"):
         prompt = """
-        Analyze the soil in this image. Provide your analysis in a clear Markdown format:
-        - **Soil Type**: (e.g., Sandy, Clay, Loam)
-        - **Visible Moisture Level**: (e.g., Dry, Moist, Saturated)
-        - **Visual Fertility & Nutrient Indicators**: Observations on color, aggregation, etc.
-        - **Organic Matter Level Estimate**: Based on visual appearance.
-        - **Best Crops for This Soil**: Suggestions based on the analysis.
-        - **Improvement Suggestions**: Steps to enhance soil health (e.g., adding compost, adjusting pH).
+        Analyze the soil in this image with Markdown formatting:
+        - **Soil Type**
+        - **Visible Moisture Level**
+        - **Nutrient Indicators**
+        - **Organic Matter Estimate**
+        - **Best Crops**
+        - **Improvement Suggestions**
         """
         st.info("Analysis in progress...")
         response = analyze_image(prompt, img)
         st.markdown("## 🔬 Analysis Results")
         st.markdown(response)
 
-# ---------------------------------------------------
-# PLANT DISEASE DETECTION
-# ---------------------------------------------------
 elif option == "Plant Disease Detection":
     st.header("🩺 Plant Disease Detection")
-    st.write("Upload an image of the entire affected plant or a section showing damage.")
+    st.write("Upload an image of the affected plant.")
     img = st.file_uploader("Upload plant image", type=["jpg", "png", "jpeg"])
 
     if st.button("🚨 Detect Disease"):
         prompt = """
-        Detect the plant disease or pest from the image. Provide your answer in a clear Markdown format:
-        - **Disease Name/Pest**: Identification of the problem.
-        - **Visible Symptoms**: Detailed description of what is visible.
-        - **Spread Prevention Steps**: How to stop it from infecting other plants.
-        - **Treatment Suggestions**: Recommended actions and products.
+        Detect the plant disease or pest. Provide:
+        - **Disease/Pest**
+        - **Visible Symptoms**
+        - **Spread Prevention**
+        - **Treatment Suggestions**
         """
         st.info("Analysis in progress...")
         response = analyze_image(prompt, img)
         st.markdown("## 🚨 Detection Results")
         st.markdown(response)
 
-# ---------------------------------------------------
-# GENERAL FARMING QUERY
-# ---------------------------------------------------
 else:
     st.header("💬 General Farming Query")
-    st.write("Ask any question about crops, irrigation, fertilization, weather, or techniques.")
-    
     question = st.text_area("Ask your farming question here:")
 
     if st.button("➡️ Ask Gemini"):
         if question:
             st.info("Thinking...")
-            # Enhanced prompt for general queries
             full_prompt = (
-                "You are an expert Smart Farming Assistant. Answer the following query "
-                "in a detailed, helpful, and organized Markdown format. Query: "
-                f"{question}"
+                "You are an expert Smart Farming Assistant. Provide a detailed, structured response. "
+                f"Query: {question}"
             )
             response = analyze_text(full_prompt)
             st.markdown("## 💡 Answer")
