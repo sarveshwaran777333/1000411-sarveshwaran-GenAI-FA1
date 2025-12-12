@@ -1,10 +1,10 @@
-#AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw
+#AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ
 import streamlit as st
 import google.generativeai as genai
 import tempfile
 from PIL import Image
 
-genai.configure(api_key="AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw")
+genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
 
 model = genai.GenerativeModel("gemini-2.5-flash")
 
