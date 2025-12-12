@@ -6,6 +6,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
 import speech_recognition as sr
 import tempfile
+import base64
 
 API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
 if not API_KEY or API_KEY.strip() == "":
@@ -90,72 +91,72 @@ if option == "General Farming Query":
 
     text_input = st.text_input("Or type your question:", value="")
 
-    st.subheader("Or upload audio")
-    st.markdown("**Step 1:** Upload MP3 file and convert to WAV in-browser for free")
-    mp3_file = st.file_uploader("Upload MP3 file:", type="mp3")
-    if mp3_file:
-        audio_bytes = mp3_file.read()
-        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-        html_code = f"""
-        <audio id="audio" src="data:audio/mp3;base64,{audio_base64}" controls></audio>
-        <button onclick="convertAudio()">Convert to WAV</button>
-        <script>
-        async function convertAudio() {{
-            const audio = document.getElementById('audio');
-            const arrayBuffer = await fetch(audio.src).then(r => r.arrayBuffer());
-            const context = new (window.AudioContext || window.webkitAudioContext)();
-            const decoded = await context.decodeAudioData(arrayBuffer);
-            const wavBuffer = audioBufferToWav(decoded);
-            const blob = new Blob([wavBuffer], {{type: 'audio/wav'}});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'converted.wav';
-            a.click();
-        }}
-        function audioBufferToWav(buffer) {{
-            const numOfChan = buffer.numberOfChannels,
-                  length = buffer.length * numOfChan * 2 + 44,
-                  bufferArray = new ArrayBuffer(length),
-                  view = new DataView(bufferArray),
-                  channels = [], i, sample, offset = 0, pos = 0;
-            function writeString(view, offset, string){{
-                for (let i = 0; i < string.length; i++) {{
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }}
+    st.subheader("Or upload audio (MP3 or WAV)")
+    audio_file = st.file_uploader("Upload your audio file:", type=["mp3","wav"])
+    if audio_file:
+        temp_audio_path = None
+        if audio_file.type == "audio/mp3":
+            audio_bytes = audio_file.read()
+            audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+            st.markdown("MP3 detected. Convert to WAV using the button below and download it for upload.")
+            html_code = f"""
+            <audio id="audio" src="data:audio/mp3;base64,{audio_base64}" controls></audio>
+            <button onclick="convertAudio()">Convert to WAV</button>
+            <script>
+            async function convertAudio() {{
+                const audio = document.getElementById('audio');
+                const arrayBuffer = await fetch(audio.src).then(r => r.arrayBuffer());
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const decoded = await context.decodeAudioData(arrayBuffer);
+                const wavBuffer = audioBufferToWav(decoded);
+                const blob = new Blob([wavBuffer], {{type: 'audio/wav'}});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'converted.wav';
+                a.click();
             }}
-            writeString(view, 0, 'RIFF'); view.setUint32(4, length - 8, true); writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numOfChan, true);
-            view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * 2 * numOfChan, true);
-            view.setUint16(32, numOfChan * 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data'); view.setUint32(40, length - 44, true);
-            for(i=0; i<numOfChan; i++) channels.push(buffer.getChannelData(i));
-            while(pos < buffer.length){{
-                for(i=0;i<numOfChan;i++){{
-                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-                    pos += 2;
+            function audioBufferToWav(buffer) {{
+                const numOfChan = buffer.numberOfChannels,
+                      length = buffer.length * numOfChan * 2 + 44,
+                      bufferArray = new ArrayBuffer(length),
+                      view = new DataView(bufferArray),
+                      channels = [], i, sample, offset = 0, pos = 0;
+                function writeString(view, offset, string){{
+                    for (let i = 0; i < string.length; i++) {{
+                        view.setUint8(offset + i, string.charCodeAt(i));
+                    }}
                 }}
-                offset++
+                writeString(view, 0, 'RIFF'); view.setUint32(4, length - 8, true); writeString(view, 8, 'WAVE');
+                writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numOfChan, true);
+                view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * 2 * numOfChan, true);
+                view.setUint16(32, numOfChan * 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data'); view.setUint32(40, length - 44, true);
+                for(i=0; i<numOfChan; i++) channels.push(buffer.getChannelData(i));
+                while(pos < buffer.length){{
+                    for(i=0;i<numOfChan;i++){{
+                        sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                        view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                        pos += 2;
+                    }}
+                    offset++
+                }}
+                return view.buffer;
             }}
-            return view.buffer;
-        }}
-        </script>
-        """
-        st.components.v1.html(html_code, height=150)
+            </script>
+            """
+            st.components.v1.html(html_code, height=150)
 
-    st.subheader("Or upload WAV directly")
-    wav_file = st.file_uploader("Upload WAV file:", type="wav")
-    if wav_file:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-            temp_audio_path = temp_audio.name
-            temp_audio.write(wav_file.read())
-        recognizer = sr.Recognizer()
-        try:
-            with sr.AudioFile(temp_audio_path) as source:
-                audio_data = recognizer.record(source)
-                st.session_state.voice_text = recognizer.recognize_google(audio_data)
-        except Exception as e:
-            st.warning(f"Could not process audio file: {e}")
+        else:  # WAV
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+                temp_audio_path = temp_audio.name
+                temp_audio.write(audio_file.read())
+            recognizer = sr.Recognizer()
+            try:
+                with sr.AudioFile(temp_audio_path) as source:
+                    audio_data = recognizer.record(source)
+                    st.session_state.voice_text = recognizer.recognize_google(audio_data)
+            except Exception as e:
+                st.warning(f"Could not process audio file: {e}")
 
     user_input = st.session_state.voice_text or text_input
     if st.button("➡️ Ask Gemini"):
