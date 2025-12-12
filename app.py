@@ -4,7 +4,6 @@ import streamlit as st
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
-import speech_recognition as sr
 
 API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
 if not API_KEY or API_KEY.strip() == "":
@@ -59,52 +58,45 @@ def analyze_text(prompt):
         return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
 
 st.title("🌾 Smart Farming Assistant")
-st.caption("AI-powered simple English answers for everyday farming questions.")
+st.caption("Ask questions, analyze leaf/plant images, all in one place.")
 
-option = st.sidebar.radio(
-    "Choose analysis type:",
-    ["General Farming Query", "Leaf Disease Analysis", "Plant Disease Detection"]
-)
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
 
-if option == "General Farming Query":
-    st.header("💬 General Farming Query")
-    if "voice_text" not in st.session_state:
-        st.session_state.voice_text = ""
+st.header("💬 Ask a Question")
+if st.button("🎤 Start Speaking"):
+    components.html("""
+    <script>
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.start();
+    recognition.onresult = function(event) {
+        const text = event.results[0][0].transcript;
+        window.parent.document.getElementById('voice_input').value = text;
+    };
+    </script>
+    <input type="hidden" id="voice_input" />
+    """, height=0)
+    st.info("Speak now...")
 
-    if st.button("🎤 Start Speaking"):
-        components.html("""
-        <script>
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.start();
-        recognition.onresult = function(event) {
-            const text = event.results[0][0].transcript;
-            window.parent.document.getElementById('voice_input').value = text;
-        };
-        </script>
-        <input type="hidden" id="voice_input" />
-        """, height=0)
-        st.info("Speak now...")
+text_input = st.text_input("Or type your question:", value="")
+user_input = st.session_state.voice_text or text_input
 
-    text_input = st.text_input("Or type your question:", value="")
-    user_input = st.session_state.voice_text or text_input
+if st.button("➡️ Ask Gemini"):
+    if user_input.strip():
+        full_prompt = f"Question: {user_input}"
+        with st.spinner("Thinking..."):
+            response = analyze_text(full_prompt)
+        st.markdown("## 💡 Answer")
+        st.markdown(response)
+    else:
+        st.warning("Please speak or type a question to ask.")
 
-    if st.button("➡️ Ask Gemini"):
-        if user_input.strip():
-            full_prompt = f"Question: {user_input}"
-            with st.spinner("Thinking..."):
-                response = analyze_text(full_prompt)
-            st.markdown("## 💡 Answer")
-            st.markdown(response)
-        else:
-            st.warning("Please speak or type a question to ask.")
-
-elif option == "Leaf Disease Analysis":
-    st.header("🌿 Leaf Disease Analysis")
-    img = st.file_uploader("Upload leaf image:", type=["jpg", "png", "jpeg"])
-    if st.button("🔬 Analyze Leaf"):
-        prompt = """
+st.header("🌿 Leaf Disease Analysis")
+leaf_img = st.file_uploader("Upload leaf image:", type=["jpg", "png", "jpeg"], key="leaf_img")
+if st.button("🔬 Analyze Leaf"):
+    prompt = """
 Provide very short answers (one sentence per heading). Use Markdown with bold headings:
 1. **Disease or Pest Detected**
 2. **Symptoms**
@@ -112,23 +104,22 @@ Provide very short answers (one sentence per heading). Use Markdown with bold he
 4. **Treatment Recommendations**
 5. **Organic/Home Remedies**
 """
-        with st.spinner("Analyzing leaf image..."):
-            response = analyze_image(prompt, img)
-        st.markdown("## 🔍 Analysis Results")
-        st.markdown(response)
+    with st.spinner("Analyzing leaf image..."):
+        response = analyze_image(prompt, leaf_img)
+    st.markdown("## 🔍 Leaf Analysis Results")
+    st.markdown(response)
 
-elif option == "Plant Disease Detection":
-    st.header("🩺 Plant Disease Detection")
-    img = st.file_uploader("Upload plant image:", type=["jpg", "png", "jpeg"])
-    if st.button("🚨 Detect Disease"):
-        prompt = """
+st.header("🩺 Plant Disease Detection")
+plant_img = st.file_uploader("Upload plant image:", type=["jpg", "png", "jpeg"], key="plant_img")
+if st.button("🚨 Detect Disease"):
+    prompt = """
 Provide very short answers (one sentence per bullet). Use Markdown:
 - **Disease/Pest**
 - **Visible Symptoms**
 - **Spread Prevention**
 - **Treatment Suggestions**
 """
-        with st.spinner("Detecting disease..."):
-            response = analyze_image(prompt, img)
-        st.markdown("## 🚨 Detection Results")
-        st.markdown(response)
+    with st.spinner("Detecting plant disease..."):
+        response = analyze_image(prompt, plant_img)
+    st.markdown("## 🚨 Plant Detection Results")
+    st.markdown(response)
