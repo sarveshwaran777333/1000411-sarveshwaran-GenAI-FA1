@@ -75,10 +75,8 @@ option = st.sidebar.radio(
 
 if option == "General Farming Query":
     st.header("💬 General Farming Query")
-
     if "voice_text" not in st.session_state:
         st.session_state.voice_text = ""
-
     if st.button("🎤 Start Speaking"):
         components.html("""
         <script>
@@ -94,19 +92,20 @@ if option == "General Farming Query":
         <input type="hidden" id="voice_input" />
         """, height=0)
         st.info("Speak now...")
-
     text_input = st.text_input("Or type your question:", value="")
-
     audio_file = st.file_uploader("Or upload an audio file (.wav/.mp3):", type=["wav", "mp3"])
     if audio_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-            if audio_file.type == "audio/mpeg":
-                sound = AudioSegment.from_file(audio_file, format="mp3")
-                sound.export(temp_audio.name, format="wav")
-            else:
-                temp_audio.write(audio_file.read())
             temp_audio_path = temp_audio.name
-
+            uploaded_temp_path = temp_audio_path + "_upload"
+            with open(uploaded_temp_path, "wb") as f:
+                f.write(audio_file.read())
+            if audio_file.type == "audio/mpeg":
+                sound = AudioSegment.from_file(uploaded_temp_path, format="mp3")
+                sound.export(temp_audio_path, format="wav")
+            else:
+                sound = AudioSegment.from_file(uploaded_temp_path, format="wav")
+                sound.export(temp_audio_path, format="wav")
         recognizer = sr.Recognizer()
         try:
             with sr.AudioFile(temp_audio_path) as source:
@@ -115,9 +114,7 @@ if option == "General Farming Query":
                 st.session_state.voice_text = audio_text
         except Exception as e:
             st.warning(f"Could not process audio file: {e}")
-
     user_input = st.session_state.voice_text or text_input
-
     if st.button("➡️ Ask Gemini"):
         if user_input.strip():
             full_prompt = f"Question: {user_input}"
