@@ -9,7 +9,7 @@ from pydub import AudioSegment
 from pydub.utils import which
 import tempfile
 
-AudioSegment.converter = which("ffmpeg")
+AudioSegment.converter = "/usr/bin/ffmpeg"
 
 API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
 if not API_KEY or API_KEY.strip() == "":
