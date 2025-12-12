@@ -1,9 +1,9 @@
-#AIzaSyAGciP7tYbmMBR4splw6oTM0fivp2aKgxI
+#AlzaSyAutiPwiEPhon5l9ppEDEHVtrEEnFg5lw
 import streamlit as st
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
-API_KEY = "AIzaSyAGciP7tYbmMBR4splw6oTM0fivp2aKgxI"
+API_KEY = "AlzaSyAutiPwiEPhon5l9ppEDEHVtrEEnFg5lw"
 if not API_KEY or API_KEY.strip() == "":
     st.error("🚨 ERROR: API KEY is missing. Please add your key in the code.")
     st.stop()
