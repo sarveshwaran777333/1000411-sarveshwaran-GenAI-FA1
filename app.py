@@ -6,7 +6,10 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
 import speech_recognition as sr
 from pydub import AudioSegment
+from pydub.utils import which
 import tempfile
+
+AudioSegment.converter = which("ffmpeg")
 
 API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
 if not API_KEY or API_KEY.strip() == "":
