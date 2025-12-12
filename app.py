@@ -1,100 +1,73 @@
 #AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw
-import re
 import streamlit as st
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-import streamlit.components.v1 as components
+from PIL import Image
 
-API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
-if not API_KEY or API_KEY.strip() == "":
-    st.error("🚨 ERROR: API KEY is missing. Please add your key in the code.")
-    st.stop()
+st.set_page_config(page_title="FarmAssist Bot", layout="wide")
 
-genai.configure(api_key=API_KEY)
-MODEL = "gemini-2.5-flash"
-safety_settings = [
-    {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
-]
+genai.configure(api_key="AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-try:
-    model = genai.GenerativeModel(MODEL, safety_settings=safety_settings)
-except Exception as e:
-    st.error(f"Failed to initialize model {MODEL}: {e}")
-    st.stop()
+def detect_language_preference(text):
+    t = text.lower()
+    if "in tamil" in t or "tamil la" in t:
+        return "tamil"
+    if "in english" in t:
+        return "english"
+    tamil_chars = sum(1 for c in text if '\u0B80' <= c <= '\u0BFF')
+    if tamil_chars > 3:
+        return "tamil"
+    return "english"
 
-st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
-SHORT_INSTRUCTION = "Answer in simple English, short sentences, understandable by any farmer."
+def generate_response(text, image=None):
+    lang = detect_language_preference(text)
 
-def shortify(text: str, max_sentences: int = 2) -> str:
-    parts = re.split(r'(?<=[.!?])\s+', text.strip())
-    if len(parts) <= max_sentences:
-        return text.strip()
-    short = " ".join(parts[:max_sentences]).strip()
-    if not re.search(r'[.!?]$', short):
-        short += "."
-    return short
+    system_rules = {
+        "english": "Answer clearly in English. Keep it simple for farmers.",
+        "tamil": "எளிமையான தமிழில் விவசாயிகளுக்குப் புரியும் வகையில் பதில் எழுதவும்."
+    }
 
-@st.cache_data(show_spinner="Generating text response...")
-def analyze_text(prompt):
-    full_prompt = f"{SHORT_INSTRUCTION} {prompt}"
-    try:
-        response = model.generate_content(full_prompt)
-        return shortify(response.text, max_sentences=2)
-    except Exception as e:
-        return f"🚨 API Error: {e}"
-
-@st.cache_data(show_spinner="Analyzing image...")
-def analyze_image(image_file):
-    prompt = """
-Detect disease or pest in the plant/leaf image. Provide short answers using Markdown:
-- **Disease/Pest**
-- **Visible Symptoms**
-- **Treatment Recommendations**
-"""
-    image_bytes = image_file.getvalue()
-    mime = image_file.type or "image/jpeg"
-    content_parts = [f"{SHORT_INSTRUCTION} {prompt}", {"mime_type": mime, "data": image_bytes}]
-    try:
-        response = model.generate_content(content_parts)
-        return response.text
-    except Exception as e:
-        return f"🚨 API Error: {e}"
-
-st.title("🌾 Smart Farming Assistant")
-st.caption("Type, speak, or upload an image. The bot will respond below.")
-
-st.header("💬 Your Message")
-
-if st.button("🎤 Speak"):
-    components.html("""
-    <script>
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.start();
-    recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        window.parent.document.getElementById('voice_input').value = text;
-    };
-    </script>
-    <input type="hidden" id="voice_input" />
-    """, height=0)
-    st.info("Speak now...")
-
-text_input = st.text_input("Type your question here:", value="")
-image_input = st.file_uploader("Optional: upload a leaf/plant image", type=["jpg","png","jpeg"])
-
-user_message = st.session_state.get("voice_text", "") or text_input
-
-if st.button("➡️ Ask"):
-    if not user_message and not image_input:
-        st.warning("Please type a question, speak, or upload an image.")
+    if image:
+        prompt = f"{system_rules[lang]}\nUser question: {text}\nExplain based on the uploaded image."
+        return model.generate_content([prompt, image]).text
     else:
-        with st.spinner("Thinking..."):
-            response_text = ""
-            if user_message:
-                response_text += analyze_text(f"Question: {user_message}") + "\n\n"
-            if image_input:
-                response_text += analyze_image(image_input)
-        st.markdown("## 💡 Answer")
-        st.markdown(response_text)
+        prompt = f"{system_rules[lang]}\nUser question: {text}"
+        return model.generate_content(prompt).text
+
+st.title("FarmAssist – All-in-One Smart Farming Bot")
+
+query = st.text_input("Ask anything (English or Tamil):")
+
+uploaded_image = st.file_uploader("Upload leaf/plant image (optional)", type=["jpg","jpeg","png"])
+
+mic_audio = st.audio_input("Use microphone to ask (optional)")
+
+if st.button("Ask"):
+    user_text = query
+
+    if mic_audio and not query:
+        try:
+            audio_bytes = mic_audio.read()
+            user_text = model.generate_content(
+                [{"mime_type": "audio/wav", "data": audio_bytes}],
+                request_options={"timeout": 300}
+            ).text
+        except:
+            st.error("Could not process microphone input.")
+            st.stop()
+
+    if not user_text:
+        st.error("Please type or speak a question.")
+        st.stop()
+
+    image_obj = None
+    if uploaded_image:
+        try:
+            image_obj = Image.open(uploaded_image)
+        except:
+            st.error("Invalid image.")
+            st.stop()
+
+    output = generate_response(user_text, image_obj)
+    st.markdown("### Response")
+    st.write(output)
