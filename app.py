@@ -58,7 +58,6 @@ def analyze_text(prompt):
         return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
 
 st.title("🌾 Smart Farming Assistant")
-st.caption("Ask questions, analyze leaf/plant images, all in one place.")
 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
