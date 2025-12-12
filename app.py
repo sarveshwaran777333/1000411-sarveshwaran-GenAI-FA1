@@ -22,7 +22,7 @@ except Exception as e:
     st.error(f"Failed to initialize model {MODEL}: {e}")
     st.stop()
 
-st.set_page_config(page_title="Smart Farming Chatbot", layout="wide")
+st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
 SHORT_INSTRUCTION = "Answer in simple English, short sentences, understandable by any farmer."
 
 def shortify(text: str, max_sentences: int = 2) -> str:
@@ -60,13 +60,11 @@ Detect disease or pest in the plant/leaf image. Provide short answers using Mark
     except Exception as e:
         return f"🚨 API Error: {e}"
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-st.title("🌾 Smart Farming Chatbot")
-st.caption("Type, speak, or upload an image — all in one chat.")
+st.title("🌾 Smart Farming Assistant")
+st.caption("Type, speak, or upload an image. The bot will respond below.")
 
 st.header("💬 Your Message")
+
 if st.button("🎤 Speak"):
     components.html("""
     <script>
@@ -88,26 +86,15 @@ image_input = st.file_uploader("Optional: upload a leaf/plant image", type=["jpg
 
 user_message = st.session_state.get("voice_text", "") or text_input
 
-if st.button("➡️ Send"):
+if st.button("➡️ Ask"):
     if not user_message and not image_input:
         st.warning("Please type a question, speak, or upload an image.")
     else:
-        st.session_state.chat_history.append({"user": user_message, "image": image_input, "bot": None})
-        last_msg = st.session_state.chat_history[-1]
-
         with st.spinner("Thinking..."):
-            bot_response = ""
-            if last_msg["user"]:
-                bot_response += analyze_text(f"Question: {last_msg['user']}") + "\n\n"
-            if last_msg["image"]:
-                bot_response += analyze_image(last_msg["image"])
-        st.session_state.chat_history[-1]["bot"] = bot_response
-
-st.subheader("🗨 Chat History")
-for entry in st.session_state.chat_history:
-    if entry["user"]:
-        st.markdown(f"**You:** {entry['user']}")
-    if entry["image"]:
-        st.image(entry["image"], caption="Uploaded Image", use_column_width=True)
-    if entry["bot"]:
-        st.markdown(f"**Bot:** {entry['bot']}")
+            response_text = ""
+            if user_message:
+                response_text += analyze_text(f"Question: {user_message}") + "\n\n"
+            if image_input:
+                response_text += analyze_image(image_input)
+        st.markdown("## 💡 Answer")
+        st.markdown(response_text)
