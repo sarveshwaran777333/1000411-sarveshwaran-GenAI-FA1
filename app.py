@@ -6,7 +6,7 @@ from PIL import Image
 
 genai.configure(api_key="AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw")
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 st.title("Smart Farm Assistant – Tamil Nadu Farmers Support")
 
