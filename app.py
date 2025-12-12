@@ -22,8 +22,8 @@ except Exception as e:
     st.error(f"Failed to initialize model {MODEL}: {e}")
     st.stop()
 
-st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
-SHORT_INSTRUCTION = "Always answer in simple, easy English that any farmer can understand. Use 1–2 short sentences only."
+st.set_page_config(page_title="Smart Farming Chatbot", layout="wide")
+SHORT_INSTRUCTION = "Answer in simple English, short sentences, understandable by any farmer."
 
 def shortify(text: str, max_sentences: int = 2) -> str:
     parts = re.split(r'(?<=[.!?])\s+', text.strip())
@@ -34,36 +34,40 @@ def shortify(text: str, max_sentences: int = 2) -> str:
         short += "."
     return short
 
-@st.cache_data(show_spinner="Analyzing image with Gemini...")
-def analyze_image(prompt, image_file):
-    if image_file is None:
-        return "**Please upload an image before clicking 'Analyze'.**"
-    image_bytes = image_file.getvalue()
-    mime = image_file.type or "image/jpeg"
-    full_prompt = f"{SHORT_INSTRUCTION} {prompt}"
-    content_parts = [full_prompt, {"mime_type": mime, "data": image_bytes}]
-    try:
-        response = model.generate_content(content_parts)
-        return response.text
-    except Exception as e:
-        return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
-
-@st.cache_data(show_spinner="Generating response...")
+@st.cache_data(show_spinner="Generating text response...")
 def analyze_text(prompt):
     full_prompt = f"{SHORT_INSTRUCTION} {prompt}"
     try:
         response = model.generate_content(full_prompt)
         return shortify(response.text, max_sentences=2)
     except Exception as e:
-        return f"🚨 **API Error:** Could not complete the analysis. Details: {e}"
+        return f"🚨 API Error: {e}"
 
-st.title("🌾 Smart Farming Assistant")
+@st.cache_data(show_spinner="Analyzing image...")
+def analyze_image(image_file):
+    prompt = """
+Detect disease or pest in the plant/leaf image. Provide short answers using Markdown:
+- **Disease/Pest**
+- **Visible Symptoms**
+- **Treatment Recommendations**
+"""
+    image_bytes = image_file.getvalue()
+    mime = image_file.type or "image/jpeg"
+    content_parts = [f"{SHORT_INSTRUCTION} {prompt}", {"mime_type": mime, "data": image_bytes}]
+    try:
+        response = model.generate_content(content_parts)
+        return response.text
+    except Exception as e:
+        return f"🚨 API Error: {e}"
 
-if "voice_text" not in st.session_state:
-    st.session_state.voice_text = ""
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-st.header("💬 Ask a Question")
-if st.button("🎤 Start Speaking"):
+st.title("🌾 Smart Farming Chatbot")
+st.caption("Type, speak, or upload an image — all in one chat.")
+
+st.header("💬 Your Message")
+if st.button("🎤 Speak"):
     components.html("""
     <script>
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -79,46 +83,31 @@ if st.button("🎤 Start Speaking"):
     """, height=0)
     st.info("Speak now...")
 
-text_input = st.text_input("Or type your question:", value="")
-user_input = st.session_state.voice_text or text_input
+text_input = st.text_input("Type your question here:", value="")
+image_input = st.file_uploader("Optional: upload a leaf/plant image", type=["jpg","png","jpeg"])
 
-if st.button("➡️ Ask Gemini"):
-    if user_input.strip():
-        full_prompt = f"Question: {user_input}"
-        with st.spinner("Thinking..."):
-            response = analyze_text(full_prompt)
-        st.markdown("## 💡 Answer")
-        st.markdown(response)
+user_message = st.session_state.get("voice_text", "") or text_input
+
+if st.button("➡️ Send"):
+    if not user_message and not image_input:
+        st.warning("Please type a question, speak, or upload an image.")
     else:
-        st.warning("Please speak or type a question to ask.")
+        st.session_state.chat_history.append({"user": user_message, "image": image_input, "bot": None})
+        last_msg = st.session_state.chat_history[-1]
 
-st.header("🌿 Leaf Disease Analysis")
-leaf_img = st.file_uploader("Upload leaf image:", type=["jpg", "png", "jpeg"], key="leaf_img")
-if st.button("🔬 Analyze Leaf"):
-    prompt = """
-Provide very short answers (one sentence per heading). Use Markdown with bold headings:
-1. **Disease or Pest Detected**
-2. **Symptoms**
-3. **Severity Level**
-4. **Treatment Recommendations**
-5. **Organic/Home Remedies**
-"""
-    with st.spinner("Analyzing leaf image..."):
-        response = analyze_image(prompt, leaf_img)
-    st.markdown("## 🔍 Leaf Analysis Results")
-    st.markdown(response)
+        with st.spinner("Thinking..."):
+            bot_response = ""
+            if last_msg["user"]:
+                bot_response += analyze_text(f"Question: {last_msg['user']}") + "\n\n"
+            if last_msg["image"]:
+                bot_response += analyze_image(last_msg["image"])
+        st.session_state.chat_history[-1]["bot"] = bot_response
 
-st.header("🩺 Plant Disease Detection")
-plant_img = st.file_uploader("Upload plant image:", type=["jpg", "png", "jpeg"], key="plant_img")
-if st.button("🚨 Detect Disease"):
-    prompt = """
-Provide very short answers (one sentence per bullet). Use Markdown:
-- **Disease/Pest**
-- **Visible Symptoms**
-- **Spread Prevention**
-- **Treatment Suggestions**
-"""
-    with st.spinner("Detecting plant disease..."):
-        response = analyze_image(prompt, plant_img)
-    st.markdown("## 🚨 Plant Detection Results")
-    st.markdown(response)
+st.subheader("🗨 Chat History")
+for entry in st.session_state.chat_history:
+    if entry["user"]:
+        st.markdown(f"**You:** {entry['user']}")
+    if entry["image"]:
+        st.image(entry["image"], caption="Uploaded Image", use_column_width=True)
+    if entry["bot"]:
+        st.markdown(f"**Bot:** {entry['bot']}")
