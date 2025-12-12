@@ -5,11 +5,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
 import speech_recognition as sr
-from pydub import AudioSegment
-from pydub.utils import which
 import tempfile
-
-AudioSegment.converter = "/usr/bin/ffmpeg"
 
 API_KEY = "AIzaSyAutjPwiEPhon5I9ZppEDEHVtrEEnFg5Iw"
 if not API_KEY or API_KEY.strip() == "":
@@ -18,7 +14,6 @@ if not API_KEY or API_KEY.strip() == "":
 
 genai.configure(api_key=API_KEY)
 MODEL = "gemini-2.5-flash"
-
 safety_settings = [
     {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
 ]
@@ -30,7 +25,6 @@ except Exception as e:
     st.stop()
 
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
-
 SHORT_INSTRUCTION = "Always answer in simple, easy English that any farmer can understand. Use 1–2 short sentences only."
 
 def shortify(text: str, max_sentences: int = 2) -> str:
@@ -77,6 +71,7 @@ if option == "General Farming Query":
     st.header("💬 General Farming Query")
     if "voice_text" not in st.session_state:
         st.session_state.voice_text = ""
+
     if st.button("🎤 Start Speaking"):
         components.html("""
         <script>
@@ -92,28 +87,76 @@ if option == "General Farming Query":
         <input type="hidden" id="voice_input" />
         """, height=0)
         st.info("Speak now...")
+
     text_input = st.text_input("Or type your question:", value="")
-    audio_file = st.file_uploader("Or upload an audio file (.wav/.mp3):", type=["wav", "mp3"])
-    if audio_file:
+
+    st.subheader("Or upload audio")
+    st.markdown("**Step 1:** Upload MP3 file and convert to WAV in-browser for free")
+    mp3_file = st.file_uploader("Upload MP3 file:", type="mp3")
+    if mp3_file:
+        audio_bytes = mp3_file.read()
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+        html_code = f"""
+        <audio id="audio" src="data:audio/mp3;base64,{audio_base64}" controls></audio>
+        <button onclick="convertAudio()">Convert to WAV</button>
+        <script>
+        async function convertAudio() {{
+            const audio = document.getElementById('audio');
+            const arrayBuffer = await fetch(audio.src).then(r => r.arrayBuffer());
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const decoded = await context.decodeAudioData(arrayBuffer);
+            const wavBuffer = audioBufferToWav(decoded);
+            const blob = new Blob([wavBuffer], {{type: 'audio/wav'}});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'converted.wav';
+            a.click();
+        }}
+        function audioBufferToWav(buffer) {{
+            const numOfChan = buffer.numberOfChannels,
+                  length = buffer.length * numOfChan * 2 + 44,
+                  bufferArray = new ArrayBuffer(length),
+                  view = new DataView(bufferArray),
+                  channels = [], i, sample, offset = 0, pos = 0;
+            function writeString(view, offset, string){{
+                for (let i = 0; i < string.length; i++) {{
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }}
+            }}
+            writeString(view, 0, 'RIFF'); view.setUint32(4, length - 8, true); writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numOfChan, true);
+            view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * 2 * numOfChan, true);
+            view.setUint16(32, numOfChan * 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data'); view.setUint32(40, length - 44, true);
+            for(i=0; i<numOfChan; i++) channels.push(buffer.getChannelData(i));
+            while(pos < buffer.length){{
+                for(i=0;i<numOfChan;i++){{
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    pos += 2;
+                }}
+                offset++
+            }}
+            return view.buffer;
+        }}
+        </script>
+        """
+        st.components.v1.html(html_code, height=150)
+
+    st.subheader("Or upload WAV directly")
+    wav_file = st.file_uploader("Upload WAV file:", type="wav")
+    if wav_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
             temp_audio_path = temp_audio.name
-            uploaded_temp_path = temp_audio_path + "_upload"
-            with open(uploaded_temp_path, "wb") as f:
-                f.write(audio_file.read())
-            if audio_file.type == "audio/mpeg":
-                sound = AudioSegment.from_file(uploaded_temp_path, format="mp3")
-                sound.export(temp_audio_path, format="wav")
-            else:
-                sound = AudioSegment.from_file(uploaded_temp_path, format="wav")
-                sound.export(temp_audio_path, format="wav")
+            temp_audio.write(wav_file.read())
         recognizer = sr.Recognizer()
         try:
             with sr.AudioFile(temp_audio_path) as source:
                 audio_data = recognizer.record(source)
-                audio_text = recognizer.recognize_google(audio_data)
-                st.session_state.voice_text = audio_text
+                st.session_state.voice_text = recognizer.recognize_google(audio_data)
         except Exception as e:
             st.warning(f"Could not process audio file: {e}")
+
     user_input = st.session_state.voice_text or text_input
     if st.button("➡️ Ask Gemini"):
         if user_input.strip():
@@ -127,8 +170,7 @@ if option == "General Farming Query":
 
 elif option == "Leaf Disease Analysis":
     st.header("🌿 Leaf Disease Analysis")
-    st.write("Upload a clear, close-up image of the affected leaf.")
-    img = st.file_uploader("Upload leaf image", type=["jpg", "png", "jpeg"])
+    img = st.file_uploader("Upload leaf image:", type=["jpg", "png", "jpeg"])
     if st.button("🔬 Analyze Leaf"):
         prompt = """
 Provide very short answers (one sentence per heading). Use Markdown with bold headings:
@@ -145,8 +187,7 @@ Provide very short answers (one sentence per heading). Use Markdown with bold he
 
 elif option == "Plant Disease Detection":
     st.header("🩺 Plant Disease Detection")
-    st.write("Upload an image of the affected plant.")
-    img = st.file_uploader("Upload plant image", type=["jpg", "png", "jpeg"])
+    img = st.file_uploader("Upload plant image:", type=["jpg", "png", "jpeg"])
     if st.button("🚨 Detect Disease"):
         prompt = """
 Provide very short answers (one sentence per bullet). Use Markdown:
