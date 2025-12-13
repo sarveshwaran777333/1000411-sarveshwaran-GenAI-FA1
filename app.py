@@ -1,37 +1,41 @@
 #AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ
-import base64
 import streamlit as st
+import base64
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
 
-API_KEY = "YOUR_GEMINI_API_KEY"
-if not API_KEY or API_KEY.strip() == "":
-    st.error("API key missing")
-    st.stop()
+st.set_page_config(page_title="AGRONOVA", layout="wide")
 
+API_KEY = "AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ"
 genai.configure(api_key=API_KEY)
 
-model = genai.GenerativeModel(
-    "gemini-1.5-flash",
-    safety_settings=[
-        {
-            "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
-            "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        }
-    ],
-)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-st.set_page_config(page_title="AGRONOVA", layout="wide")
 st.title("🌾 AGRONOVA")
 st.caption("Ask anything about farming using text, voice, or image")
 
-if "pasted_image" not in st.session_state:
-    st.session_state.pasted_image = None
+if "image_bytes" not in st.session_state:
+    st.session_state.image_bytes = None
 
 components.html(
     """
     <script>
+    function startMic() {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Browser does not support speech recognition");
+            return;
+        }
+        const rec = new webkitSpeechRecognition();
+        rec.lang = 'en-US';
+        rec.start();
+        rec.onresult = function(e) {
+            const text = e.results[0][0].transcript;
+            const input = window.parent.document.querySelector('input[type="text"]');
+            input.value = text;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
     document.addEventListener('paste', function (event) {
         const items = event.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
@@ -39,13 +43,47 @@ components.html(
                 const blob = items[i].getAsFile();
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    const base64Image = e.target.result;
-                    const input = window.parent.document.getElementById("paste_image");
-                    input.value = base64Image;
-                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                    window.parent.postMessage({
+                        type: "IMAGE_PASTE",
+                        data: e.target.result
+                    }, "*");
                 };
                 reader.readAsDataURL(blob);
             }
+        }
+    });
+    </script>
+
+    <button onclick="startMic()" style="
+        margin-bottom:12px;
+        padding:6px 12px;
+        border-radius:6px;
+        border:none;
+        cursor:pointer;
+    ">🎤 Speak</button>
+    """,
+    height=60,
+)
+
+st.markdown(
+    "<small>🖼️ <b>Ask AGRONOVA with image</b> — copy a plant or leaf image and press <b>Ctrl + V</b></small>",
+    unsafe_allow_html=True,
+)
+
+query = st.text_input(
+    "",
+    placeholder="Ask anything about farming",
+)
+
+components.html(
+    """
+    <script>
+    window.addEventListener("message", (event) => {
+        if (event.data.type === "IMAGE_PASTE") {
+            const streamlitDoc = window.parent.document;
+            const input = streamlitDoc.getElementById("image_data");
+            input.value = event.data.data;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
         }
     });
     </script>
@@ -53,74 +91,37 @@ components.html(
     height=0,
 )
 
-pasted_image_base64 = st.text_input("", key="paste_image", label_visibility="collapsed")
+image_data = st.text_input("", key="image_data", label_visibility="collapsed")
 
-components.html(
-    """
-    <script>
-    function startMic() {
-        if (!('webkitSpeechRecognition' in window)) {
-            alert('Speech recognition not supported in this browser');
-            return;
-        }
-        const rec = new webkitSpeechRecognition();
-        rec.lang = 'en-US';
-        rec.interimResults = false;
-        rec.start();
-        rec.onresult = function(e) {
-            const text = e.results[0][0].transcript;
-            const input = window.parent.document.getElementById("voice_input");
-            input.value = text;
-            input.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-    }
-    </script>
-    <button onclick="startMic()">🎤 Speak</button>
-    """,
-    height=45,
-)
-
-voice_text = st.text_input("", key="voice_input", label_visibility="collapsed")
-
-text = st.text_input(
-    "",
-    placeholder="Ask anything about farming",
-)
-
-st.caption("🖼️ Ask AGRONOVA with image — copy a plant or leaf image and press Ctrl + V")
-
-query = voice_text if voice_text else text
-
-image_bytes = None
-if pasted_image_base64:
+if image_data:
     try:
-        header, encoded = pasted_image_base64.split(",", 1)
-        image_bytes = base64.b64decode(encoded)
-        st.image(image_bytes, caption="Pasted image", use_column_width=True)
-    except Exception:
-        image_bytes = None
+        header, encoded = image_data.split(",", 1)
+        st.session_state.image_bytes = base64.b64decode(encoded)
+        st.image(st.session_state.image_bytes, caption="Pasted image", use_column_width=True)
+    except:
+        st.session_state.image_bytes = None
 
 if st.button("Ask"):
-    if not query and not image_bytes:
+    if not query and not st.session_state.image_bytes:
         st.warning("Please type, speak, or paste an image")
     else:
         with st.spinner("Thinking..."):
             try:
-                if image_bytes:
-                    content = [
-                        "Detect plant or leaf disease. Answer in very simple English. Give short treatment.",
+                if st.session_state.image_bytes:
+                    response = model.generate_content([
+                        "Identify the plant disease and give simple treatment.",
                         {
                             "mime_type": "image/png",
-                            "data": image_bytes,
-                        },
-                    ]
-                    response = model.generate_content(content)
+                            "data": st.session_state.image_bytes
+                        }
+                    ])
                 else:
-                    prompt = "Answer in very simple English for farmers. Keep it short. " + query
-                    response = model.generate_content(prompt)
+                    response = model.generate_content(
+                        "Answer in simple English for farmers: " + query
+                    )
 
                 st.markdown("### 💡 Answer")
-                st.markdown(response.text)
+                st.write(response.text)
 
-            except Exception:
-                st.error("Error while generating response. Check your API key or input.")
+            except:
+                st.error("Error while generating response. Check API key or input.")
