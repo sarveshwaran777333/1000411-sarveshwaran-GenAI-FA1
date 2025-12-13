@@ -1,104 +1,114 @@
 #AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ
+import base64
 import streamlit as st
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import streamlit.components.v1 as components
 
 API_KEY = "AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ"
-if not API_KEY or API_KEY.strip() == "":
-    st.error("API key missing")
+if not API_KEY:
     st.stop()
 
 genai.configure(api_key=API_KEY)
 
-MODEL = "gemini-1.5-flash"
-
-safety_settings = [
-    {
-        "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
-        "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    }
-]
-
-try:
-    model = genai.GenerativeModel(MODEL, safety_settings=safety_settings)
-except Exception as e:
-    st.error(e)
-    st.stop()
+model = genai.GenerativeModel(
+    "gemini-1.5-flash",
+    safety_settings=[
+        {
+            "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
+            "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        }
+    ],
+)
 
 st.set_page_config(page_title="Smart Farming Assistant", layout="wide")
-
 st.title("🌾 Smart Farming Assistant")
-st.caption("Type, speak, or upload a plant image")
+st.caption("Type, speak, or paste an image (Ctrl+V)")
 
-if "voice_text" not in st.session_state:
-    st.session_state.voice_text = ""
+if "pasted_image" not in st.session_state:
+    st.session_state.pasted_image = None
 
 components.html(
     """
     <script>
-    function startDictation() {
-        if (!('webkitSpeechRecognition' in window)) {
-            alert('Speech recognition not supported');
-            return;
+    document.addEventListener('paste', function (event) {
+        const items = event.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64Image = e.target.result;
+                    const input = window.parent.document.getElementById("paste_image");
+                    input.value = base64Image;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                };
+                reader.readAsDataURL(blob);
+            }
         }
-        const recognition = new webkitSpeechRecognition();
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        recognition.start();
-        recognition.onresult = function(event) {
-            const text = event.results[0][0].transcript;
-            const input = window.parent.document.getElementById("voice_input");
-            input.value = text;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-        };
-    }
+    });
     </script>
-    <button onclick="startDictation()">🎤 Speak</button>
     """,
-    height=50,
+    height=0,
 )
 
-voice_input = st.text_input(
-    "Voice text",
-    key="voice_input",
+pasted_image_base64 = st.text_input(
+    "Paste image here",
+    key="paste_image",
     label_visibility="collapsed",
 )
 
-text_input = st.text_input("Type your question")
-
-image = st.file_uploader(
-    "Upload leaf or plant image (optional)",
-    type=["jpg", "jpeg", "png"],
+components.html(
+    """
+    <script>
+    function startMic() {
+        const rec = new webkitSpeechRecognition();
+        rec.lang = 'en-US';
+        rec.start();
+        rec.onresult = function(e) {
+            const text = e.results[0][0].transcript;
+            const input = window.parent.document.getElementById("voice");
+            input.value = text;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    }
+    </script>
+    <button onclick="startMic()">🎤 Speak</button>
+    """,
+    height=40,
 )
 
-final_query = voice_input if voice_input else text_input
+voice_text = st.text_input("voice", key="voice", label_visibility="collapsed")
+text = st.text_input("Type your question")
+
+query = voice_text if voice_text else text
+
+if pasted_image_base64:
+    header, encoded = pasted_image_base64.split(",", 1)
+    image_bytes = base64.b64decode(encoded)
+    st.image(image_bytes, caption="Pasted image")
 
 if st.button("Ask"):
-    if not final_query and not image:
-        st.warning("Please type, speak, or upload an image")
+    if not query and not pasted_image_base64:
+        st.warning("Type, speak, or paste an image")
     else:
         with st.spinner("Thinking..."):
             try:
-                if image:
+                if pasted_image_base64:
                     content = [
-                        "Answer in very simple English for farmers. Detect disease and give short treatment.",
+                        "Detect plant or leaf disease. Answer in very simple English. Give short treatment.",
                         {
-                            "mime_type": image.type,
-                            "data": image.getvalue(),
+                            "mime_type": "image/png",
+                            "data": image_bytes,
                         },
                     ]
                     response = model.generate_content(content)
-                    st.markdown("### 💡 Answer")
-                    st.markdown(response.text)
                 else:
-                    prompt = (
-                        "Answer in very simple English for farmers. Keep it short. "
-                        + final_query
-                    )
+                    prompt = "Answer in very simple English for farmers. Keep it short. " + query
                     response = model.generate_content(prompt)
-                    st.markdown("### 💡 Answer")
-                    st.markdown(response.text)
+
+                st.markdown("### 💡 Answer")
+                st.markdown(response.text)
+
             except Exception:
-                st.error("Error while generating response. Check your API key or input.")
+                st.error("Error while generating response. Check API key or input.")
