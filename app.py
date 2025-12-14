@@ -1,4 +1,4 @@
-#AIzaSyDhHTS1ix5bcS4yxj_s9satnI8e4l6K08Q 
+#AIzaSyDhHTS1ix5bcS4yxj_s9satnI8e4l6K08Q
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -9,7 +9,6 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyDhHTS1ix5bcS4yxj_s9satnI8e4l6K08Q")
 
-# Automatically select the first valid model that supports generateContent
 available_models = [
     m.name for m in genai.list_models()
     if "generateContent" in getattr(m, "supported_generation_methods", [])
@@ -77,12 +76,14 @@ if ask:
     if uploaded_image:
         image = Image.open(uploaded_image)
         prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
-        response = model.generate_content([prompt, image])
+        concise_prompt = f"{prompt}\n\nAnswer concisely in 3-5 lines."
+        response = model.generate_content([concise_prompt, image])
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     elif text_query:
-        response = model.generate_content(text_query)
+        concise_prompt = f"{text_query}\n\nAnswer concisely in 3-5 lines."
+        response = model.generate_content(concise_prompt)
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
