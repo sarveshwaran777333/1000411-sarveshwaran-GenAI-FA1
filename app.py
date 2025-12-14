@@ -9,7 +9,16 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Automatically select the first valid model that supports generateContent
+available_models = [
+    m.name for m in genai.list_models()
+    if "generateContent" in getattr(m, "supported_generation_methods", [])
+]
+if not available_models:
+    st.error("No models supporting generateContent are available for this API key.")
+    st.stop()
+
+MODEL_NAME = available_models[0]
 
 st.markdown("""
 <style>
@@ -27,15 +36,8 @@ body { background-color: #0e1117; }
 st.markdown("## 🌾 AGRONOVA")
 st.markdown("Ask anything about farming using text, voice, or image")
 
-text_query = st.text_input(
-    label="",
-    placeholder="Ask anything about farming",
-)
-
-uploaded_image = st.file_uploader(
-    label="",
-    type=["jpg", "jpeg", "png"]
-)
+text_query = st.text_input(label="", placeholder="Ask anything about farming")
+uploaded_image = st.file_uploader(label="", type=["jpg", "jpeg", "png"])
 
 components.html("""
 <script>
@@ -70,13 +72,12 @@ font-size:16px;
 ask = st.button("Ask")
 
 if ask:
-    if uploaded_image:
-        img = Image.open(uploaded_image)
-        prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
+    model = genai.GenerativeModel(MODEL_NAME)
 
-        response = model.generate_content(
-            [prompt, img]
-        )
+    if uploaded_image:
+        image = Image.open(uploaded_image)
+        prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
+        response = model.generate_content([prompt, image])
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
