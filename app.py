@@ -9,8 +9,8 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
 
-model_text = genai.GenerativeModel("gemini-1.5-flash")
-model_vision = genai.GenerativeModel("gemini-1.5-flash")
+model_text = genai.GenerativeModel("gemini-1.0-flash")
+model_vision = genai.GenerativeModel("gemini-1.0-flash")
 
 st.markdown("""
 <style>
