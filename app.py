@@ -1,16 +1,13 @@
-#"AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ"
+#AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ
 import streamlit as st
 import google.generativeai as genai
-import streamlit.components.v1 as components
 from PIL import Image
 import io
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
-
-model_text = genai.GenerativeModel("gemini-1.0-flash")
-model_vision = genai.GenerativeModel("gemini-1.0-flash")
 
 st.markdown("""
 <style>
@@ -35,12 +32,10 @@ text_query = st.text_input(
 
 uploaded_image = st.file_uploader(
     label="",
-    type=["jpg", "jpeg", "png"],
-    accept_multiple_files=False
+    type=["jpg", "jpeg", "png"]
 )
 
-components.html(
-"""
+components.html("""
 <script>
 let recognition;
 function startDictation() {
@@ -61,7 +56,6 @@ function startDictation() {
   recognition.start();
 }
 </script>
-
 <button onclick="startDictation()" style="
 padding:10px 16px;
 border-radius:8px;
@@ -69,9 +63,7 @@ border:none;
 cursor:pointer;
 font-size:16px;
 ">🎤 Speak</button>
-""",
-height=70,
-)
+""", height=70)
 
 ask = st.button("Ask")
 
@@ -79,14 +71,22 @@ if ask:
     if uploaded_image:
         image = Image.open(uploaded_image)
         prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
-        response = model_vision.generate_content([prompt, image])
+        image_bytes = genai.generate_image(
+            model="gemini-image-1.0",
+            prompt=prompt,
+            size="1024x1024"
+        ).image_bytes
+        result_image = Image.open(io.BytesIO(image_bytes))
         st.markdown("### 🌱 Result")
-        st.write(response.text)
+        st.image(result_image)
 
     elif text_query:
-        response = model_text.generate_content(text_query)
+        response = genai.generate_text(
+            model="gemini-1.0",
+            prompt=text_query
+        )
         st.markdown("### 🌱 Result")
-        st.write(response.text)
+        st.write(response.candidates[0].output)
 
     else:
         st.warning("Please ask a question or upload an image")
