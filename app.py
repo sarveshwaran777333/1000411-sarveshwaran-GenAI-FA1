@@ -1,4 +1,4 @@
-#AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ
+#AIzaSyDhHTS1ix5bcS4yxj_s9satnI8e4l6K08Q 
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
-genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
+genai.configure(api_key="AIzaSyDhHTS1ix5bcS4yxj_s9satnI8e4l6K08Q")
 
 # Automatically select the first valid model that supports generateContent
 available_models = [
