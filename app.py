@@ -9,6 +9,9 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyBp3WN0Q1ww9-XCOaKYen9zKZrUU0COqnQ")
 
+model_text = genai.GenerativeModel("gemini-1.0")
+model_image = genai.GenerativeModel("gemini-image-1.0")
+
 st.markdown("""
 <style>
 body { background-color: #0e1117; }
@@ -71,8 +74,7 @@ if ask:
     if uploaded_image:
         image = Image.open(uploaded_image)
         prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
-        image_bytes = genai.generate_image(
-            model="gemini-image-1.0",
+        image_bytes = model_image.generate_image(
             prompt=prompt,
             size="1024x1024"
         ).image_bytes
@@ -81,12 +83,9 @@ if ask:
         st.image(result_image)
 
     elif text_query:
-        response = genai.generate_text(
-            model="gemini-1.0",
-            prompt=text_query
-        )
+        response = model_text.generate_text(prompt=text_query)
         st.markdown("### 🌱 Result")
-        st.write(response.candidates[0].output)
+        st.write(response.text)
 
     else:
         st.warning("Please ask a question or upload an image")
