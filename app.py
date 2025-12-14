@@ -39,34 +39,73 @@ text_query = st.text_input(label="", placeholder="Ask anything about farming")
 uploaded_image = st.file_uploader(label="", type=["jpg", "jpeg", "png"])
 
 components.html("""
+<div id="overlay" style="
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    backdrop-filter: blur(6px);
+    background-color: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+">
+  <button id="micButton" style="
+    padding: 30px;
+    border-radius: 50%;
+    border: none;
+    background-color: #4f6cff;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+  ">🎤</button>
+</div>
+
 <script>
 let recognition;
+const overlay = document.getElementById("overlay");
+const micButton = document.getElementById("micButton");
+
 function startDictation() {
-  if (!('webkitSpeechRecognition' in window)) {
-    alert("Speech recognition not supported");
-    return;
-  }
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.onresult = function(event) {
-    const text = event.results[0][0].transcript;
-    const input = window.parent.document.querySelector('input[type="text"]');
-    input.value = text;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  };
-  recognition.start();
+    overlay.style.display = "flex";
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported");
+        overlay.style.display = "none";
+        return;
+    }
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = function(event) {
+        const text = event.results[0][0].transcript;
+        const input = window.parent.document.querySelector('input[type="text"]');
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    recognition.onend = function() {
+        overlay.style.display = "none";
+    };
+
+    recognition.start();
 }
+
+micButton.onclick = () => {
+    startDictation();
+};
 </script>
+
 <button onclick="startDictation()" style="
 padding:10px 16px;
 border-radius:8px;
 border:none;
 cursor:pointer;
 font-size:16px;
+background-color:#4f6cff;
+color:white;
 ">🎤 Speak</button>
-""", height=70)
+""", height=1000)
 
 ask = st.button("Ask")
 
