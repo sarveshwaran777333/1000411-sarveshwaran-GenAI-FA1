@@ -1,4 +1,4 @@
-#AIzaSyApJDMFXQqpZw00mWHkI-IUymNLxF9hJ7A
+#AIzaSyCUohRCUvFm5789mXmDfun8qbgFiIbXct8
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
-genai.configure(api_key="AIzaSyApJDMFXQqpZw00mWHkI-IUymNLxF9hJ7A")
+genai.configure(api_key="AIzaSyCUohRCUvFm5789mXmDfun8qbgFiIbXct8")
 
 available_models = [
     m.name for m in genai.list_models()
