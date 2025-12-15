@@ -38,7 +38,6 @@ st.markdown("Ask anything about farming using text, voice, or image")
 text_query = st.text_input(label="", placeholder="Ask anything about farming")
 uploaded_image = st.file_uploader(label="", type=["jpg", "jpeg", "png"])
 
-# Mic overlay HTML (position fixed, separate from Streamlit layout)
 components.html("""
 <div id="overlay" style="
     position: fixed;
