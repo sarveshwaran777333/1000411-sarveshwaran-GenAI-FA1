@@ -2,7 +2,6 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import io
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
@@ -13,15 +12,28 @@ available_models = [
     m.name for m in genai.list_models()
     if "generateContent" in getattr(m, "supported_generation_methods", [])
 ]
+
 if not available_models:
-    st.error("No models supporting generateContent are available for this API key.")
+    st.error("No supported Gemini models available.")
     st.stop()
 
 MODEL_NAME = available_models[0]
+model = genai.GenerativeModel(MODEL_NAME)
+
+SYSTEM_PROMPT = """
+You are AgroNova, a farming-only AI assistant.
+
+Rules:
+- Answer ONLY farming and agriculture related questions.
+- Topics allowed: crops, soil, irrigation, pests, fertilizers, plant diseases, farming tools, and weather for farming.
+- Use very simple English.
+- Keep answers short (3–5 lines).
+- If the question is NOT related to farming, reply ONLY with:
+"I can help only with farming and agriculture questions."
+"""
 
 st.markdown("""
 <style>
-body { background-color: #0e1117; }
 .bigbox {
     border: 2px dashed #4f6cff;
     border-radius: 14px;
@@ -35,65 +47,26 @@ body { background-color: #0e1117; }
 st.markdown("## 🌾 AGRONOVA")
 st.markdown("Ask anything about farming using text, voice, or image")
 
-text_query = st.text_input(label="", placeholder="Ask anything about farming")
-uploaded_image = st.file_uploader(label="", type=["jpg", "jpeg", "png"])
+text_query = st.text_input("", placeholder="Ask anything about farming")
+uploaded_image = st.file_uploader("", type=["jpg", "jpeg", "png"])
 
 components.html("""
-<div id="overlay" style="
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    backdrop-filter: blur(6px);
-    background-color: rgba(0,0,0,0.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-">
-  <button id="micButton" style="
-    padding: 30px;
-    border-radius: 50%;
-    border: none;
-    background-color: #4f6cff;
-    color: white;
-    font-size: 30px;
-    cursor: pointer;
-  ">🎤</button>
-</div>
-
 <script>
-let recognition;
-const overlay = document.getElementById("overlay");
-const micButton = document.getElementById("micButton");
-
 function startDictation() {
-    overlay.style.display = "flex";
     if (!('webkitSpeechRecognition' in window)) {
         alert("Speech recognition not supported");
-        overlay.style.display = "none";
         return;
     }
-    recognition = new webkitSpeechRecognition();
+    const recognition = new webkitSpeechRecognition();
     recognition.lang = "en-IN";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
     recognition.onresult = function(event) {
         const text = event.results[0][0].transcript;
         const input = window.parent.document.querySelector('input[type="text"]');
         input.value = text;
         input.dispatchEvent(new Event('input', { bubbles: true }));
     };
-
-    recognition.onend = function() {
-        overlay.style.display = "none";
-    };
-
     recognition.start();
 }
-
-micButton.onclick = () => {
-    startDictation();
-};
 </script>
 
 <button onclick="startDictation()" style="
@@ -105,27 +78,25 @@ font-size:16px;
 background-color:#4f6cff;
 color:white;
 ">🎤 Speak</button>
-""", height=120)  # small height so it doesn't hide other elements
+""", height=90)
 
-# Streamlit Ask button
 ask = st.button("Ask")
 
 if ask:
-    model = genai.GenerativeModel(MODEL_NAME)
-
     if uploaded_image:
         image = Image.open(uploaded_image)
-        prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
-        concise_prompt = f"{prompt}\n\nAnswer concisely in 3-5 lines."
-        response = model.generate_content([concise_prompt, image])
+        user_prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
+        final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{user_prompt}"
+        response = model.generate_content([final_prompt, image])
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     elif text_query:
-        concise_prompt = f"{text_query}\n\nAnswer concisely in 3-5 lines."
-        response = model.generate_content(concise_prompt)
+        final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{text_query}"
+        response = model.generate_content(final_prompt)
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     else:
-        st.warning("Please ask a question or upload an image")
+        st.warning("Please ask a farming question or upload an image")
+
