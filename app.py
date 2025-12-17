@@ -1,15 +1,15 @@
 #AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E
 import streamlit as st
 import google.generativeai as genai
-from pillow import Image
+from PIL import Image
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E")
 
-text_model = genai.GenerativeModel("models/gemini-1.5-pro")
-vision_model = genai.GenerativeModel("models/gemini-1.5-pro-vision")
+text_model = genai.GenerativeModel("models/gemini-1.0-pro")
+vision_model = genai.GenerativeModel("models/gemini-1.0-pro-vision")
 
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
