@@ -8,17 +8,8 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E")
 
-available_models = [
-    m.name for m in genai.list_models()
-    if "generateContent" in getattr(m, "supported_generation_methods", [])
-]
-
-if not available_models:
-    st.error("No supported Gemini models available.")
-    st.stop()
-
-MODEL_NAME = available_models[0]
-model = genai.GenerativeModel(MODEL_NAME)
+text_model = genai.GenerativeModel("models/gemini-1.0-pro")
+vision_model = genai.GenerativeModel("models/gemini-1.0-pro-vision")
 
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
@@ -32,23 +23,11 @@ Rules:
 "I can help only with farming and agriculture questions."
 """
 
-st.markdown("""
-<style>
-.bigbox {
-    border: 2px dashed #4f6cff;
-    border-radius: 14px;
-    padding: 40px;
-    text-align: center;
-    color: #cfd3ff;
-}
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("## 🌾 AGRONOVA")
 st.markdown("Ask anything about farming using text, voice, or image")
 
 text_query = st.text_input("", placeholder="Ask anything about farming")
-uploaded_image = st.file_uploader("", type=["jpg", "jpeg", "png"])
+uploaded_image = st.file_uploader("Ask AGRONOVA with image", type=["jpg", "jpeg", "png"])
 
 components.html("""
 <script>
@@ -87,16 +66,15 @@ if ask:
         image = Image.open(uploaded_image)
         user_prompt = text_query if text_query else "Identify plant or leaf disease and give treatment"
         final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{user_prompt}"
-        response = model.generate_content([final_prompt, image])
+        response = vision_model.generate_content([final_prompt, image])
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     elif text_query:
         final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{text_query}"
-        response = model.generate_content(final_prompt)
+        response = text_model.generate_content(final_prompt)
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     else:
         st.warning("Please ask a farming question or upload an image")
-
