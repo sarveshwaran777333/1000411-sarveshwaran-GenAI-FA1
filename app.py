@@ -1,7 +1,7 @@
 #AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
+from pillow import Image
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
