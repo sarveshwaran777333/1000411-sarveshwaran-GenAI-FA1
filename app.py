@@ -1,4 +1,4 @@
-#AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E
+#AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 # ------------------ GEMINI CONFIG ------------------
-genai.configure(api_key="AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E")  # keep your key private
+genai.configure(api_key="AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM")  # keep your key private
 
 MODEL_NAME = "gemini-1.5-flash"
 model = genai.GenerativeModel(MODEL_NAME)
