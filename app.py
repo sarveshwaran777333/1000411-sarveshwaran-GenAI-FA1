@@ -8,7 +8,7 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 # ---------------- SESSION STATE ----------------
 if "bg_color" not in st.session_state:
-    st.session_state.bg_color = "#0e1117"
+    st.session_state.bg_color = "#a2d5ab"  # softer default green for visibility
 
 # ---------------- BACKGROUND STYLE ----------------
 def set_background(color):
@@ -21,12 +21,6 @@ def set_background(color):
         input, textarea {{
             background-color: #1c1f26 !important;
             color: white !important;
-        }}
-        /* Color picker outline in black */
-        input[type=color] {{
-            border: 2px solid black !important;
-            height: 35px;
-            width: 100%;
         }}
         </style>
         """,
@@ -57,15 +51,41 @@ st.markdown("**Farming AI assistant (Text · Image)**")
 
 # ---------------- BACKGROUND PICKER ----------------
 st.markdown("### 🎨 Change background")
+st.markdown(
+    """
+    <style>
+    /* Color picker outline in black and bigger */
+    input[type=color] {
+        border: 2px solid black !important;
+        height: 40px;
+        width: 60px;
+        margin-bottom: 10px;
+    }
+
+    /* Style Apply Background button */
+    .apply-bg-btn button {
+        margin-top: 10px;
+        padding: 8px 16px;
+        background-color: #111;
+        color: white;
+        border-radius: 5px;
+        border: 1px solid black;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 new_color = st.color_picker(
     "Pick a background colour",
     st.session_state.bg_color
 )
 
-# Button to apply the background color
+st.markdown('<div class="apply-bg-btn">', unsafe_allow_html=True)
 if st.button("Apply Background Color"):
     st.session_state.bg_color = new_color
     set_background(st.session_state.bg_color)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- INPUTS ----------------
 question = st.text_input(
