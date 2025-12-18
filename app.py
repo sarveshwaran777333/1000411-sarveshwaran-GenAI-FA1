@@ -4,16 +4,13 @@ import google.generativeai as genai
 from PIL import Image
 import streamlit.components.v1 as components
 
-# ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
-# ------------------ GEMINI CONFIG ------------------
-genai.configure(api_key="AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM")  # keep your key private
+genai.configure(api_key="AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM")
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "models/gemini-1.5-flash"
 model = genai.GenerativeModel(MODEL_NAME)
 
-# ------------------ SYSTEM PROMPT ------------------
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
 
@@ -26,7 +23,6 @@ Rules:
 "I can help only with farming and agriculture questions."
 """
 
-# ------------------ UI STYLE ------------------
 st.markdown("""
 <style>
 .bigbox {
@@ -38,11 +34,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------ HEADER ------------------
 st.markdown("## 🌾 AGRONOVA")
 st.markdown("Ask anything about farming using **text, voice, or image**")
 
-# ------------------ INPUT AREA ------------------
 text_query = st.text_input(
     "",
     placeholder="Ask anything about farming"
@@ -53,7 +47,6 @@ uploaded_image = st.file_uploader(
     type=["jpg", "jpeg", "png"]
 )
 
-# ------------------ VOICE INPUT ------------------
 components.html("""
 <script>
 function startDictation() {
@@ -88,10 +81,8 @@ color:white;
 ">🎤 Speak</button>
 """, height=90)
 
-# ------------------ ASK BUTTON ------------------
 ask = st.button("Ask")
 
-# ------------------ RESPONSE LOGIC ------------------
 if ask:
     try:
         if uploaded_image:
