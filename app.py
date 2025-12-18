@@ -8,7 +8,7 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 # ---------------- SESSION STATE ----------------
 if "bg_color" not in st.session_state:
-    st.session_state.bg_color = "#a2d5ab"  # softer default green for visibility
+    st.session_state.bg_color = "#a2d5ab"  # softer default green
 
 # ---------------- BACKGROUND STYLE ----------------
 def set_background(color):
@@ -54,29 +54,36 @@ st.markdown("### 🎨 Change background")
 st.markdown(
     """
     <style>
-    /* Enhanced Color picker outline */
+    /* Strong black outline for color picker */
     input[type=color] {
         border: 3px solid black !important;
-        border-radius: 5px;
-        box-shadow: 0 0 5px #000;
-        height: 40px;
-        width: 60px;
+        border-radius: 8px !important;
+        box-shadow: 0 0 0 2px black inset;
+        height: 50px !important;
+        width: 50px !important;
+        cursor: pointer;
         margin-bottom: 10px;
     }
 
-    /* Ensure black outline on focus */
+    /* Black outline when focused */
     input[type=color]:focus {
         outline: 2px solid black !important;
     }
 
-    /* Style Apply Background button */
+    /* Apply Background button styling */
     .apply-bg-btn button {
         margin-top: 10px;
-        padding: 8px 16px;
+        padding: 10px 20px;
         background-color: #111;
         color: white;
-        border-radius: 5px;
-        border: 1px solid black;
+        border-radius: 8px;
+        border: 2px solid black;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .apply-bg-btn button:hover {
+        background-color: #222;
     }
     </style>
     """,
