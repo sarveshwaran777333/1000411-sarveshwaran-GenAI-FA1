@@ -8,8 +8,8 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyDSzGRDqBpaC5uKc209JOa94xI3vnj8M_E")
 
-text_model = genai.GenerativeModel("models/gemini-1.0-pro")
-vision_model = genai.GenerativeModel("models/gemini-1.0-pro-vision")
+text_model = genai.GenerativeModel("models/gemini-1.5-flash")
+vision_model = genai.GenerativeModel("models/gemini-1.0-flash-vision")
 
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
