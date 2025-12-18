@@ -2,13 +2,16 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import streamlit.components.v1 as components
+import io
 
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
+# ---------------- SESSION STATE ----------------
 if "bg_color" not in st.session_state:
     st.session_state.bg_color = "#0e1117"
 
+# ---------------- BACKGROUND STYLE ----------------
 st.markdown(
     f"""
     <style>
@@ -24,88 +27,83 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-genai.configure(api_key="API_KEY")
+# ---------------- GEMINI CONFIG ----------------
+# Use st.secrets for API key instead of hardcoding
+genai.configure(api_key=st.secrets["GENAI_API_KEY"])
 model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
 
 Rules:
-- Answer ONLY farming and agriculture questions.
-- Use simple English.
-- Limit answers to 3–5 lines.
-- If not farming related, reply:
+- Answer ONLY farming and agriculture questions
+- Use simple English
+- Maximum 5 lines
+- If question is not about farming, reply:
 "I can help only with farming and agriculture questions."
 """
 
+# ---------------- UI ----------------
 st.markdown("## 🌾 AGRONOVA")
-st.markdown("**Farming AI assistant (Text · Voice · Image)**")
+st.markdown("**Farming AI assistant (Text · Image)**")
 
-with st.popover("🎨 Change background"):
-    color = st.color_picker(
-        "Select background colour",
-        st.session_state.bg_color
-    )
-    if color:
-        st.session_state.bg_color = color
-        st.rerun()
+# ---------------- BACKGROUND PICKER ----------------
+st.markdown("### 🎨 Change background")
+new_color = st.color_picker(
+    "Pick a background colour",
+    st.session_state.bg_color
+)
+if new_color != st.session_state.bg_color:
+    st.session_state.bg_color = new_color
 
-text_query = st.text_input("", placeholder="Ask a farming question")
+# ---------------- INPUTS ----------------
+question = st.text_input(
+    "",
+    placeholder="Ask a farming question"
+)
 
-uploaded_image = st.file_uploader(
-    "Drag and drop a plant / leaf image here",
+image_file = st.file_uploader(
+    "Upload a plant / leaf image",
     type=["jpg", "jpeg", "png"]
 )
 
-components.html("""
-<script>
-function startDictation() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported");
-        return;
-    }
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        const input = window.parent.document.querySelector('input[type="text"]');
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    recognition.start();
-}
-</script>
+# Disable button if no input
+ask = st.button("Ask", disabled=not (question or image_file))
 
-<button onclick="startDictation()" style="
-margin-top:10px;
-padding:10px 16px;
-border-radius:8px;
-border:none;
-background:#4f6cff;
-color:white;
-font-size:16px;
-cursor:pointer;
-">🎤 Speak</button>
-""", height=90)
-
-ask = st.button("Ask")
-
+# ---------------- RESPONSE ----------------
 if ask:
-    if uploaded_image:
-        image = Image.open(uploaded_image)
-        prompt = text_query or "Identify the plant disease and suggest treatment"
-        response = model.generate_content(
-            [SYSTEM_PROMPT + prompt, image]
-        )
-        st.markdown("### 🌱 Result")
-        st.write(response.text)
-
-    elif text_query:
-        response = model.generate_content(
-            SYSTEM_PROMPT + text_query
-        )
-        st.markdown("### 🌱 Result")
-        st.write(response.text)
-
-    else:
+    if not question and not image_file:
         st.warning("Please ask a farming question or upload an image")
+    else:
+        with st.spinner("Analyzing..."):
+            try:
+                # If an image is uploaded
+                if image_file:
+                    image = Image.open(image_file)
+                    st.image(image, caption="Uploaded Image", use_column_width=True)
+                    
+                    # Convert image to bytes for Gemini API
+                    img_bytes = io.BytesIO()
+                    image.save(img_bytes, format=image.format)
+                    img_bytes = img_bytes.getvalue()
+
+                    prompt = question or "Identify plant disease and suggest treatment"
+                    response = model.generate_content(
+                        input=[SYSTEM_PROMPT + prompt],
+                        images=[img_bytes]
+                    )
+                else:
+                    response = model.generate_content(
+                        input=SYSTEM_PROMPT + question
+                    )
+
+                # Safely display response text
+                result_text = getattr(response, "text", None)
+                if result_text:
+                    st.markdown("### 🌱 Result")
+                    st.write(result_text)
+                else:
+                    st.error("No response received from AI.")
+
+            except Exception as e:
+                st.error(f"Something went wrong. Please try again. ({e})")
