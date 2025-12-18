@@ -56,34 +56,50 @@ uploaded_image = st.file_uploader("", type=["jpg", "jpeg", "png"])
 components.html(
 """
 <style>
-#colorBtn {
-  width: 42px;
-  height: 42px;
-  border-radius: 8px;
-  border: 2px solid white;
-  cursor: pointer;
-  background: #4f6cff;
+.color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
 }
-#colorInput {
+
+.color-label {
+  color: #cfd3ff;
+  font-size: 14px;
+}
+
+.color-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 2px solid #cfd3ff;
+  cursor: pointer;
+}
+
+.color-input {
   opacity: 0;
-  width: 42px;
-  height: 42px;
   position: absolute;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
 }
 </style>
 
-<div style="position:relative;display:inline-block;">
-  <div id="colorBtn"></div>
-  <input type="color" id="colorInput" value="#0e1117"
-    onchange="
-      document.body.style.backgroundColor=this.value;
-      document.querySelector('.stApp').style.backgroundColor=this.value;
-    ">
+<div class="color-wrap">
+  <span class="color-label">Change background</span>
+  <div style="position:relative">
+    <div class="color-btn" id="btn"></div>
+    <input class="color-input" type="color" value="#0e1117"
+      onchange="
+        document.querySelector('.stApp').style.backgroundColor=this.value;
+        document.getElementById('btn').style.backgroundColor=this.value;
+      ">
+  </div>
 </div>
 """,
-height=60
+height=70
 )
+
 
 
 ask = st.button("Ask")
