@@ -8,7 +8,7 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 
 genai.configure(api_key="AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM")
 
-MODEL_NAME = "models/gemini-1.5-flash"
+MODEL_NAME = "models/gemini-2.5-flash"
 model = genai.GenerativeModel(MODEL_NAME)
 
 SYSTEM_PROMPT = """
