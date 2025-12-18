@@ -53,39 +53,38 @@ st.markdown("Farming AI assistant (Text • Voice • Image)")
 
 text_query = st.text_input("", placeholder="Ask a farming question")
 uploaded_image = st.file_uploader("", type=["jpg", "jpeg", "png"])
-
 components.html(
 """
-<script>
-function startDictation() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported");
-        return;
-    }
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        const input = window.parent.document.querySelector('input[type="text"]');
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    recognition.start();
+<style>
+#colorBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  border: 2px solid white;
+  cursor: pointer;
+  background: #4f6cff;
 }
-</script>
+#colorInput {
+  opacity: 0;
+  width: 42px;
+  height: 42px;
+  position: absolute;
+  cursor: pointer;
+}
+</style>
 
-<button onclick="startDictation()" style="
-padding:10px 16px;
-border-radius:8px;
-border:none;
-cursor:pointer;
-font-size:16px;
-background-color:#4f6cff;
-color:white;
-">🎤 Speak</button>
+<div style="position:relative;display:inline-block;">
+  <div id="colorBtn"></div>
+  <input type="color" id="colorInput" value="#0e1117"
+    onchange="
+      document.body.style.backgroundColor=this.value;
+      document.querySelector('.stApp').style.backgroundColor=this.value;
+    ">
+</div>
 """,
-height=90
+height=60
 )
+
 
 ask = st.button("Ask")
 
