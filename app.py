@@ -54,12 +54,19 @@ st.markdown("### 🎨 Change background")
 st.markdown(
     """
     <style>
-    /* Color picker outline in black and bigger */
+    /* Enhanced Color picker outline */
     input[type=color] {
-        border: 2px solid black !important;
+        border: 3px solid black !important;
+        border-radius: 5px;
+        box-shadow: 0 0 5px #000;
         height: 40px;
         width: 60px;
         margin-bottom: 10px;
+    }
+
+    /* Ensure black outline on focus */
+    input[type=color]:focus {
+        outline: 2px solid black !important;
     }
 
     /* Style Apply Background button */
