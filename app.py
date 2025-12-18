@@ -6,60 +6,49 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="AGRONOVA", layout="wide")
 
-genai.configure(api_key="AIzaSyC-bojZZZiNEkF8nLcvaPfsSPGyQh0HCmM")
+if "bg_color" not in st.session_state:
+    st.session_state.bg_color = "#0e1117"
 
-MODEL_NAME = "models/gemini-2.5-flash"
-model = genai.GenerativeModel(MODEL_NAME)
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-color: {st.session_state.bg_color};
+    }}
+    input, textarea {{
+        background-color: #1c1f26 !important;
+        color: white !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+genai.configure(api_key="API_KEY")
+model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 SYSTEM_PROMPT = """
 You are AgroNova, a farming-only AI assistant.
 
 Rules:
-- Answer ONLY farming and agriculture related questions.
-- Allowed topics: crops, soil, irrigation, pests, fertilizers, plant diseases, tools, farming weather.
+- Answer ONLY farming and agriculture questions.
 - Use simple English.
-- Answer in 3–5 short lines.
-- If NOT farming related, reply ONLY:
+- Limit answers to 3–5 lines.
+- If not farming related, reply:
 "I can help only with farming and agriculture questions."
 """
 
-st.markdown("""
-<style>
-body {
-    background-color: #0e1117;
-}
-input, textarea {
-    background-color: #1c1f26 !important;
-    color: white !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("## 🌾 AGRONOVA")
-st.markdown("**Farming AI assistant (Text • Voice • Image)**")
+st.markdown("**Farming AI assistant (Text · Voice · Image)**")
 
-components.html(
-"""
-<style>
-.bg-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 10px 0 20px 0;
-  color: #cfd3ff;
-  font-size: 14px;
-}
-</style>
-
-<div class="bg-control">
-  <span>Change background</span>
-  <input type="color" value="#0e1117"
-    style="width:28px;height:28px;border:none;background:none;cursor:pointer"
-    onchange="document.querySelector('.stApp').style.backgroundColor=this.value">
-</div>
-""",
-height=60
-)
+with st.popover("🎨 Change background"):
+    color = st.color_picker(
+        "Select background colour",
+        st.session_state.bg_color
+    )
+    if color:
+        st.session_state.bg_color = color
+        st.rerun()
 
 text_query = st.text_input("", placeholder="Ask a farming question")
 
@@ -72,13 +61,11 @@ components.html("""
 <script>
 function startDictation() {
     if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported in this browser");
+        alert("Speech recognition not supported");
         return;
     }
     const recognition = new webkitSpeechRecognition();
     recognition.lang = "en-IN";
-    recognition.interimResults = false;
-
     recognition.onresult = function(event) {
         const text = event.results[0][0].transcript;
         const input = window.parent.document.querySelector('input[type="text"]');
@@ -94,10 +81,10 @@ margin-top:10px;
 padding:10px 16px;
 border-radius:8px;
 border:none;
-cursor:pointer;
-font-size:16px;
-background-color:#4f6cff;
+background:#4f6cff;
 color:white;
+font-size:16px;
+cursor:pointer;
 ">🎤 Speak</button>
 """, height=90)
 
@@ -106,17 +93,17 @@ ask = st.button("Ask")
 if ask:
     if uploaded_image:
         image = Image.open(uploaded_image)
-        user_prompt = text_query if text_query else "Identify the plant disease and suggest treatment"
-        final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{user_prompt}"
-
-        response = model.generate_content([final_prompt, image])
+        prompt = text_query or "Identify the plant disease and suggest treatment"
+        response = model.generate_content(
+            [SYSTEM_PROMPT + prompt, image]
+        )
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
     elif text_query:
-        final_prompt = f"{SYSTEM_PROMPT}\nUser question:\n{text_query}"
-        response = model.generate_content(final_prompt)
-
+        response = model.generate_content(
+            SYSTEM_PROMPT + text_query
+        )
         st.markdown("### 🌱 Result")
         st.write(response.text)
 
