@@ -49,9 +49,9 @@ new_color = st.color_picker(
     st.session_state.bg_color
 )
 
-if st.button("Apply Background Color"):
+if new_color != st.session_state.bg_color:
     st.session_state.bg_color = new_color
-    st.experimental_rerun()
+    set_background(st.session_state.bg_color)
 
 question = st.text_input(
     "",
@@ -71,6 +71,7 @@ if ask:
     else:
         with st.spinner("Analyzing..."):
             try:
+                
                 if image_file:
                     image = Image.open(image_file)
                     st.image(image, caption="Uploaded Image", use_column_width=True)
@@ -89,7 +90,7 @@ if ask:
                         input=SYSTEM_PROMPT + question
                     )
                     
-                    result_text = getattr(response, "text", None)
+                result_text = getattr(response, "text", None)
                 if result_text:
                     st.markdown("### 🌱 Result")
                     st.write(result_text)
