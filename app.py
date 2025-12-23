@@ -10,14 +10,30 @@ st.set_page_config(page_title="AGRONOVA", layout="wide")
 if "bg_color" not in st.session_state:
     st.session_state.bg_color = "#a2d5ab"
 
+# ---------------- COLOR CONTRAST LOGIC ----------------
+def get_text_color(hex_color):
+    hex_color = hex_color.lstrip("#")
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    brightness = (0.299*r + 0.587*g + 0.114*b)
+    return "#000000" if brightness > 186 else "#FFFFFF"
+
 # ---------------- BACKGROUND STYLE ----------------
 def set_background(color):
+    text_color = get_text_color(color)
+
     st.markdown(
         f"""
         <style>
         .stApp {{
             background-color: {color};
+            color: {text_color};
         }}
+
+        h1, h2, h3, h4, h5, h6,
+        p, span, label, div {{
+            color: {text_color} !important;
+        }}
+
         input, textarea {{
             background-color: #1c1f26 !important;
             color: white !important;
@@ -79,11 +95,9 @@ if ask:
         try:
             content = []
 
-            # Always include system + user prompt
             user_prompt = question or "Identify the plant disease and suggest treatment."
             content.append(SYSTEM_PROMPT + "\n" + user_prompt)
 
-            # If image exists, add it properly
             if image_file:
                 image = Image.open(image_file)
                 st.image(image, caption="Uploaded Image", use_column_width=True)
@@ -97,7 +111,6 @@ if ask:
                     "data": img_bytes
                 })
 
-            # ✅ CORRECT API CALL
             response = model.generate_content(content)
 
             if response.text:
@@ -108,4 +121,3 @@ if ask:
 
         except Exception as e:
             st.error(f"Something went wrong. Please try again.\n\n{e}")
-
